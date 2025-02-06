@@ -80,7 +80,6 @@ def table_view(df_, col, _title):
         dfcol = pd.DataFrame()
         for _brand in _brand_list:
             dftemp = get_word_combination_frequency(df_, col, _brand)
-            print(dftemp)
             dfcol = pd.concat([dfcol, dftemp], axis=0)
 
         dfcol = dfcol.reset_index()

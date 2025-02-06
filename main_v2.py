@@ -212,7 +212,13 @@ if __name__ == '__main__':
         add_line()
         i=i+1
             
+    col = "Product Story"
+    _title = f"K. {col}"
+    st.markdown(f'<p style="color:purple;font-size:16px;font-weight:bold;border-radius:2%;">{_title}</p>', unsafe_allow_html=True)
+    brand_positions = calculate_brand_positions(df, col)
     
+    if brand_positions:
+        plot_brand_positions(brand_positions)
     
 
 

@@ -36,7 +36,7 @@ def add_line():
 def streamlit_setup(_title, _description):
     st.set_page_config(page_title="Home", page_icon="👋", layout="wide")
     
-    col1, col2 = st.columns([1, 4])
+    col1, col2 = st.columns([1, 5])
 
     with col1:
         img = show_image(image_path = "oab_logo_low_resolution.png")
@@ -107,7 +107,6 @@ def streamlit_sidebar_selections_A(df_):
     
     option1 = st.sidebar.multiselect("Sub Category", options = df_['new_Sub-category'].unique(), default = df_['new_Sub-category'].unique())
     df_ = df_[df_['new_Sub-category'].isin(option1)]
-
     return df_
 
 
@@ -216,11 +215,11 @@ def show_product_image_and_URL(df_, col1, col2, product_image):
     
             image_selected = product_image[clicked]
             URL = df_[df_[col1]==image_selected][col2].unique()[0]
-            
+
             link_text = "Click here to view the product on the website"
             st.markdown(f'<a href="{URL}" target="_blank" style="font-size:15px;">{link_text}</a>', unsafe_allow_html=True)
             
-            response = requests.get(image_selected, headers=headers)
+            response = requests.get(image_selected, headers=headers,)
             img = Image.open(BytesIO(response.content))
             axes.imshow(img)
             axes.axis('off')

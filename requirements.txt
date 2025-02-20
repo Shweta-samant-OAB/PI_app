@@ -6,3 +6,4 @@ openpyxl
 matplotlib
 nltk
 st-clickable-images
+sklearn

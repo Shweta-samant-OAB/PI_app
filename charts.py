@@ -510,10 +510,10 @@ def process_collaborations(df):
     return df_filtered
 
 
-def processed_gender_mix(df):
+def gender_mix_distribution(df):
     """Processes only the Gender-Mix column."""
     return process_gender_mix(df)
 
-def processed_collaborations(df):
+def collaborations_distribution(df):
     """Processes only the Collaborations column."""
     return process_collaborations(df)

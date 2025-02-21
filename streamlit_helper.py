@@ -97,8 +97,23 @@ def cluster_initialise(df_, df_percentile, clusterName, pricing_cluster_field, _
     df_[clusterName] = np.where(df_['Brand_D2C'].isin(AUR_cluster), 'Yes', 'No')
 
     return df_, df_percentile
+    
 
+def sustainability_cluster(df_, clusterName, sustainability_range):
+    """
+    Clusters brands based on their average sustainability scores within a given range.
+    """
+    brand_avg_scores = df_.groupby('Brand_D2C')['Sustainability'].mean().reset_index()
 
+    brand_avg_scores[clusterName] = np.where(
+        brand_avg_scores['Sustainability'].between(sustainability_range[0], sustainability_range[1]), 'Yes', 'No'
+    )
+
+    AUR_cluster = brand_avg_scores[brand_avg_scores[clusterName] == 'Yes']['Brand_D2C'].unique()
+
+    df_[clusterName] = np.where(df_['Brand_D2C'].isin(AUR_cluster), 'Yes', 'No')
+
+    return df_
 
 def streamlit_sidebar_selections_A(df_):
 

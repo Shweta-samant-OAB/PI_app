@@ -175,7 +175,7 @@ if __name__ == '__main__':
         pass
 
     ##############-------Gender mix------------------#####################
-    dff2 = processed_gender_mix(dff)
+    dff2 = gender_mix_distribution(dff)
 
     _title = "G1 : Gender-Mix Distribution Brand wise"
 
@@ -213,7 +213,7 @@ if __name__ == '__main__':
         add_line()
 
  
-    dff2 = processed_collaborations(dff)
+    dff2 = collaborations_distribution(dff)
 
     _title = "G2 : Collaborations"
 

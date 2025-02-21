@@ -455,9 +455,9 @@ def plot_brand_positioning(df, x_col, y_col):
 
     fig.update_layout(
         # title=title,
-        xaxis=dict(title=x_col, zeroline=False, range=[x_min, x_max], 
+        xaxis=dict(zeroline=False, range=[x_min, x_max], 
                    showticklabels=False, showgrid=False),
-        yaxis=dict(title=y_col, zeroline=False, range=[y_min, y_max], 
+        yaxis=dict(zeroline=False, range=[y_min, y_max], 
                    showticklabels=False, showgrid=False),
         width=900,
         height=700,

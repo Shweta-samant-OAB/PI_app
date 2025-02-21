@@ -12,6 +12,7 @@ import random
 import streamlit as st
 from matplotlib.ticker import FuncFormatter
 from sklearn.preprocessing import StandardScaler
+import plotly.colors as pc
 
 
 
@@ -202,6 +203,56 @@ def multi_pie_chart_color(df_, col, _list, _title, height, width):
         return fig
 
 
+def multi_pie_charts(df_, col, _list, _title, height, width):
+    if not df_.empty:
+        df_Dict = color_frequency_brand(df_, col, _list)
+        
+        categories = []
+        values = []
+        colors = []
+        
+        unique_values = set()
+        for k in df_Dict.keys():
+            unique_values.update(df_Dict[k][col])
+        
+        color_palette = pc.qualitative.Dark24  # Alternative: pc.qualitative.D3
+        color_map = {v: color_palette[i % len(color_palette)] for i, v in enumerate(sorted(unique_values))}
+        
+        for k in df_Dict.keys():
+            categories.append(df_Dict[k][col])
+            values.append(df_Dict[k]['word_freq'])
+            
+            # Assign dark colors based on the category
+            category_colors = [color_map.get(c, '#333333') for c in df_Dict[k][col]]  # Default to dark gray
+            colors.append(category_colors)
+        
+        n = (len(df_Dict) + 1) // 2
+        specs = [[{'type': 'domain'}, {'type': 'domain'}] for _ in range(n)]
+        
+        fig = make_subplots(rows=n, cols=2, specs=specs, subplot_titles=tuple(df_Dict.keys()))
+        
+        p = 0
+        for m in range(n):
+            fig.add_trace(
+                go.Pie(labels=categories[p], values=values[p], name=_list[p], marker=dict(colors=colors[p]), hole=0.1),
+                row=m+1, col=1
+            )
+            fig.add_trace(
+                go.Pie(labels=categories[p], values=values[p], name=_list[p], marker=dict(colors=colors[p]), hole=0.1),
+                row=m+1, col=2
+            )
+            p += 1
+        
+        fig.update_traces(marker=dict(line=dict(color='white', width=1)))  
+        fig.update_layout(
+            title_text=_title, 
+            height=height, 
+            width=width, 
+            plot_bgcolor='white',  
+            paper_bgcolor='white',  
+            font=dict(color="black")  
+        )
+        return fig
 
 def histogram_pricing_chart(df_, BrandList, col):
 
@@ -225,6 +276,37 @@ def histogram_pricing_chart(df_, BrandList, col):
                           plot_bgcolor='white',paper_bgcolor='white')
     
         return fig
+    
+
+def multi_pie_chart_collaboration(df, col, brands, _title, height=800, width=800):
+    
+    df_Dict = {brand: df[df["Brand_D2C"] == brand][col].value_counts() for brand in brands}
+    
+    unique_collaborations = set()
+    for collabs in df_Dict.values():
+        unique_collaborations.update(collabs.index.tolist())
+    
+
+    color_palette = px.colors.qualitative.D3  # Alternative: px.colors.qualitative.Dark24
+    color_map = {v: color_palette[i % len(color_palette)] for i, v in enumerate(sorted(unique_collaborations))}
+
+    n = (len(brands) + 1) // 2  
+    fig = make_subplots(rows=n, cols=2, specs=[[{"type": "domain"}, {"type": "domain"}]] * n, subplot_titles=brands)
+
+    for i, brand in enumerate(brands):
+        row, col_num = divmod(i, 2)
+
+        labels = df_Dict[brand].index.tolist()
+        values = df_Dict[brand].values.tolist()
+        color_list = [color_map[label] for label in labels if label in color_map]  
+
+        fig.add_trace(
+            go.Pie(labels=labels, values=values, name=brand, marker=dict(colors=color_list)),
+            row=row + 1, col=col_num + 1
+        )
+
+    fig.update_layout(title_text=_title, height=height, width=width)
+    return fig
 
 def calculate_brand_positions(df, col="Product Story"):
     """
@@ -291,19 +373,15 @@ def calculate_brand_positioning(df):
     Groups dataset by Brand_D2C and calculates average scores for fashion attributes.
     Returns a DataFrame with rounded scores.
     """
-    # Relevant columns for brand positioning
     columns_to_avg = [
         "Fashion-forward", "Function-forward", "Minimalistic", "Bold", 
         "Modern", "Classic", "Streetwear", "Luxury-Premium"
     ]
     
-    # Convert to numeric (forcing errors='coerce' to handle non-numeric values)
     df[columns_to_avg] = df[columns_to_avg].apply(pd.to_numeric, errors='coerce')
 
-    # Group by Brand and compute mean
     brand_scores = df.groupby("Brand_D2C")[columns_to_avg].mean().reset_index()
     
-    # Round values to 2 decimal places
     brand_scores[columns_to_avg] = brand_scores[columns_to_avg].round(2)
     
     return brand_scores
@@ -313,7 +391,6 @@ def calculate_relative_scores(df):
     """
     Standardizes the fashion attribute scores and rounds them to the nearest 0.5 step.
     """
-    # Columns to scale
     cols_to_scale = [
         "Fashion-forward", "Function-forward",
         "Minimalistic", "Bold",
@@ -321,24 +398,20 @@ def calculate_relative_scores(df):
         "Streetwear", "Luxury-Premium"
     ]
     
-    # Standardize using StandardScaler
     scaler = StandardScaler()
     df[cols_to_scale] = scaler.fit_transform(df[cols_to_scale])
     
-    # Round to nearest 0.5
     df[cols_to_scale] = np.round(df[cols_to_scale] * 2) / 2  
     
     return df
 
 # Step 3: Generate Brand Positioning Plot
-def plot_brand_positioning(df, x_col, y_col, title):
+def plot_brand_positioning(df, x_col, y_col):
     """
     Generates an interactive brand positioning scatter plot using Plotly.
     """
-    # Compute mean for quadrants
-    avg_x, avg_y = 0, 0
+    avg_x, avg_y = df[x_col].mean(), df[y_col].mean()
 
-    # Categorize brands into quadrants
     categories = []
     colors = []
 
@@ -359,7 +432,6 @@ def plot_brand_positioning(df, x_col, y_col, title):
     df["category"] = categories
     df["color"] = colors
 
-    # Create interactive scatter plot
     fig = go.Figure()
 
     for category, color in zip(df["category"].unique(), ["green", "blue", "yellow", "red"]):
@@ -375,28 +447,73 @@ def plot_brand_positioning(df, x_col, y_col, title):
             hovertemplate="<b>%{text}</b><br>" + x_col + ": %{x:.2f}<br>" + y_col + ": %{y:.2f}<extra></extra>"
         ))
 
-    # Define axis range dynamically with 0.5 intervals
     x_min, x_max = df[x_col].min() - 0.5, df[x_col].max() + 0.5
     y_min, y_max = df[y_col].min() - 0.5, df[y_col].max() + 0.5
 
-    # Add reference lines at (0,0)
-    fig.add_hline(y=0, line_dash="dash", line_color="gray")
-    fig.add_vline(x=0, line_dash="dash", line_color="gray")
+    fig.add_hline(y=avg_y, line_dash="dash", line_color="gray")
+    fig.add_vline(x=avg_x, line_dash="dash", line_color="gray")
 
-    # Axis labels
     fig.update_layout(
-        title=title,
-        xaxis=dict(title=x_col, zeroline=False, range=[x_min, x_max], tickmode="linear", dtick=0.5),
-        yaxis=dict(title=y_col, zeroline=False, range=[y_min, y_max], tickmode="linear", dtick=0.5),
+        # title=title,
+        xaxis=dict(title=x_col, zeroline=False, range=[x_min, x_max], 
+                   showticklabels=False, showgrid=False),
+        yaxis=dict(title=y_col, zeroline=False, range=[y_min, y_max], 
+                   showticklabels=False, showgrid=False),
         width=900,
         height=700,
         annotations=[
-            dict(x=x_max, y=0, text=f"More {x_col}", showarrow=False, font_size=14, xanchor="right", yanchor="bottom", font_weight="bold"),
-            dict(x=x_min, y=0, text=f"Less {x_col}", showarrow=False, font_size=14, xanchor="left", yanchor="bottom", font_weight="bold"),
-            dict(x=0, y=y_max, text=f"More {y_col}", showarrow=False, font_size=14, xanchor="center", yanchor="bottom", font_weight="bold"),
-            dict(x=0, y=y_min, text=f"Less {y_col}", showarrow=False, font_size=14, xanchor="center", yanchor="top", font_weight="bold"),
+            dict(x=x_max, y=avg_y, text=f"More {x_col}", showarrow=False, 
+                 font=dict(size=12, color="black", family="Arial Black"), 
+                 xanchor="right", yanchor="bottom"),
+            
+            dict(x=x_min, y=avg_y, text=f"Less {x_col}", showarrow=False, 
+                 font=dict(size=12, color="black", family="Arial Black"), 
+                 xanchor="left", yanchor="bottom"),
+            
+            dict(x=avg_x, y=y_max, text=f"More {y_col}", showarrow=False, 
+                 font=dict(size=12, color="black", family="Arial Black"), 
+                 xanchor="center", yanchor="bottom"),
+            
+            dict(x=avg_x, y=y_min, text=f"Less {y_col}", showarrow=False, 
+                 font=dict(size=12, color="black", family="Arial Black"), 
+                 xanchor="center", yanchor="top"),
         ],
         legend_title="Brand Categories"
     )
 
     return fig
+
+
+
+def process_gender_mix(df):
+    df['Gender-Mix'] = df['Gender-Mix'].str.lower().str.strip()
+    
+    df['Gender-Mix'] = df['Gender-Mix'].replace({
+        'men': 'Men', 'male': 'Men',
+        'women': 'Women', 'female': 'Women',
+        'unisex': 'Unisex'
+    })
+    valid_categories = {'Men', 'Women', 'Unisex'}
+    df['Gender-Mix'] = df['Gender-Mix'].astype(str).str.strip().str.title()
+    df = df[df['Gender-Mix'].isin(valid_categories)]    
+    return df
+
+
+# Function to process collaboration data
+def process_collaborations(df):
+    valid_collaborations = df["Collaborations"].replace("", float("nan")).dropna()
+
+    top_collaborations = valid_collaborations.value_counts().nlargest(3).index.tolist()
+
+    df_filtered = df[df["Collaborations"].isin(top_collaborations)].copy()
+    
+    return df_filtered
+
+
+def processed_gender_mix(df):
+    """Processes only the Gender-Mix column."""
+    return process_gender_mix(df)
+
+def processed_collaborations(df):
+    """Processes only the Collaborations column."""
+    return process_collaborations(df)

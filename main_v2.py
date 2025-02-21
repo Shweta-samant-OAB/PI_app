@@ -122,6 +122,7 @@ if __name__ == '__main__':
     
     
     dff2 = streamlit_sidebar_selections_B(dff)
+    df_brand_scores = calculate_brand_positioning(dff2)
     
     col='new_Type'
     chart_df = transformLevel2(dff2, col)
@@ -172,7 +173,83 @@ if __name__ == '__main__':
         add_line()
     else:
         pass
+
+    ##############-------Gender mix------------------#####################
+    dff2 = processed_gender_mix(dff)
+
+    _title = "G1 : Gender-Mix Distribution Brand wise"
+
+    if len(_list) >= 4:
+        _list = _list[:4]
+        col = 'Gender-Mix'
+        dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
+        fig = multi_pie_charts(dff2, col, _list, _title=_title, height=800, width=800)
+
+        with st.container(height=800):
+            st.plotly_chart(fig, use_container_width=True)
         
+        add_line()
+
+    elif len(_list) >= 2:
+        _list = _list[:2]
+        col = 'Gender-Mix'
+        dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
+        fig = multi_pie_charts(dff2, col, _list, _title=_title, height=500, width=500)
+
+        with st.container(height=500):
+            st.plotly_chart(fig, use_container_width=True)
+        
+        add_line()
+
+    elif len(_list) == 1:
+        _title = f"G : Gender-Mix Distribution for {_list[0]}"
+        col = 'Gender-Mix'
+        dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
+        fig = single_pie_chart_color(dff2, col, _title, height=500, width=500)
+
+        with st.container(height=500):
+            st.plotly_chart(fig, use_container_width=True)
+        
+        add_line()
+
+ 
+    dff2 = processed_collaborations(dff)
+
+    _title = "G2 : Collaborations"
+
+    if len(_list) >= 4:
+        _list = _list[:4]
+        col = 'Collaborations'
+        dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
+        fig = multi_pie_chart_collaboration(dff2, col, _list, _title=_title, height=800, width=800)
+
+        with st.container(height=800):
+            st.plotly_chart(fig, use_container_width=True)
+        
+        add_line()
+
+    elif len(_list) >= 2:
+        _list = _list[:2]
+        col = 'Collaborations'
+        dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
+        fig = multi_pie_chart_collaboration(dff2, col, _list, _title=_title, height=500, width=500)
+
+        with st.container(height=500):
+            st.plotly_chart(fig, use_container_width=True)
+        
+        add_line()
+
+    elif len(_list) == 1:
+        _title = f"G : Collaborations Distribution for {_list[0]}"
+        col = 'Collaborations'
+        dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
+        fig = single_pie_chart_color(dff2, col, _title, height=500, width=500)
+
+        with st.container(height=500):
+            st.plotly_chart(fig, use_container_width=True)
+        
+        add_line()
+            
 
 
     # _title = "H : Product Image Snapshot"
@@ -210,17 +287,6 @@ if __name__ == '__main__':
         st.dataframe(df_table,width=2000, height=200)
         add_line()
         i=i+1
-            
-
-    # col = "Product Story"
-    # _title = f"K. Theme Identifier based on {col}"
-    # st.markdown(f'<p style="color:purple;font-size:16px;font-weight:bold;border-radius:2%;">{_title}</p>', unsafe_allow_html=True)
-    # # df_table = df[["Brand_D2C", col]].head(10)  # Display first 10 rows
-    # # st.dataframe(df_table, width=2000, height=200)
-    # brand_positions = calculate_brand_positions(df, col)
-    
-    # if brand_positions:
-    #     plot_brand_positions(brand_positions)
 
     category_pairs = [
         ("Fashion-forward", "Function-forward"),
@@ -236,26 +302,18 @@ if __name__ == '__main__':
         "Brand Positioning: Streetwear vs Luxury"
     ]
 
-    # Load raw CSV
-    # raw_csv_path = "raw_brand_data.csv"  # Replace with actual file path
-    # df_raw = pd.read_csv(raw_csv_path)
-
-    # Compute brand positioning scores
-    df_brand_scores = calculate_brand_positioning(df)
-
-    # Compute relative scores
+    
     df_relative_scores = calculate_relative_scores(df_brand_scores)
 
-    # Streamlit UI
     st.title("Brand Positioning Analysis")
 
     i = 1
-    for (x_col, y_col), plot_title in zip(category_pairs, plot_titles):
-        _title = f'J.{i}. Distribution for - {x_col} vs {y_col}'
+    for (x_col, y_col) in category_pairs:
+        _title = f'J.{i}. Brand Positioning - {x_col} vs {y_col}'
+        
         st.markdown(f'<p style="color:purple;font-size:16px;font-weight:bold;border-radius:2%;"> {_title}</p>', unsafe_allow_html=True)
         
-        # Generate and display the plot
-        fig = plot_brand_positioning(df_relative_scores, x_col, y_col, plot_title)
+        fig = plot_brand_positioning(df_relative_scores, x_col, y_col)
         st.plotly_chart(fig, use_container_width=True)
 
         add_line()

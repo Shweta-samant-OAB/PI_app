@@ -163,7 +163,7 @@ def add_brand_image_to_scatter(fig, chart_df, context, measure_field, clusterNam
         
     return fig
 
-def add_brand_image_to_sustainability(fig, chart_df, context, measure_field, clusterName, add_vline='No'):
+def add_image_to_sustainability(fig, chart_df, context, measure_field, clusterName, add_vline='No'):
     brandLogo_path = Path.cwd().joinpath("brandLogo")
     
     for brand in chart_df[context].unique():

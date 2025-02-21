@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
     # Apply clustering based on sustainability range
     cluster_name = 'AUR_cluster'  
-    df = sustainability_cluster(df, cluster_name, sustainability_range)
+    df = sustainable_cluster(df, cluster_name, sustainability_range)
 
     # Filter data based on selected range
     df_filtered = df[(df['Sustainability'] >= sustainability_range[0]) & (df['Sustainability'] <= sustainability_range[1])]

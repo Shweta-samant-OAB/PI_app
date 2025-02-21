@@ -163,7 +163,32 @@ def add_brand_image_to_scatter(fig, chart_df, context, measure_field, clusterNam
         
     return fig
 
+def add_brand_image_to_sustainability(fig, chart_df, context, measure_field, clusterName, add_vline='No'):
+    brandLogo_path = Path.cwd().joinpath("brandLogo")
+    
+    for brand in chart_df[context].unique():
+        img_path = os.path.join(brandLogo_path, brand + '.jpg')
 
+        if os.path.exists(img_path):  # Ensure the image exists
+            img_x = chart_df.loc[chart_df[context] == brand, measure_field].values[0]
+            img_y = chart_df.loc[chart_df[context] == brand, context].values[0]
+
+            fig.add_layout_image(
+                x=img_x, y=img_y, 
+                source=Image.open(img_path), 
+                xref="x", yref="y", 
+                sizex=0.5, sizey=0.5,  # Adjusted size
+                xanchor="center", yanchor="middle"
+            )
+
+    if add_vline == 'Yes':
+        min_x = chart_df[chart_df[clusterName] == 'Yes'][measure_field].min()
+        max_x = chart_df[chart_df[clusterName] == 'Yes'][measure_field].max()
+        
+        fig.add_vline(x=min_x, line_width=1, line_color="coral", line_dash="dash")
+        fig.add_vline(x=max_x, line_width=1, line_color="coral", line_dash="dash")
+        
+    return fig
 
 def plot_images_side_by_side(image_paths):
     num_images = len(image_paths)

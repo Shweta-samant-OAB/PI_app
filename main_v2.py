@@ -158,7 +158,7 @@ if __name__ == '__main__':
     fig.update_xaxes(range=[sustainability_range[0], sustainability_range[1]])
 
     # Add brand images to the plot
-    fig = add_image_to_sustainability(
+    fig = add_brand_image_to_sustainability(
         fig, chart_df=chart_df, context=context, measure_field=sustainability_field, 
         clusterName=cluster_name, add_vline='Yes'
     )

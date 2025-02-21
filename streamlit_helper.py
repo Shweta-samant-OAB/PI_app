@@ -99,7 +99,7 @@ def cluster_initialise(df_, df_percentile, clusterName, pricing_cluster_field, _
     return df_, df_percentile
     
 
-def sustainability_cluster(df_, clusterName, sustainability_range):
+def sustainable_cluster(df_, clusterName, sustainability_range):
     """
     Clusters brands based on their average sustainability scores within a given range.
     """

@@ -59,6 +59,27 @@ if __name__ == '__main__':
     st.pyplot(fig)
     add_line()
 
+    #####################################################################################################
+    cluster_name = 'AUR_cluster' 
+    df['Sustainability'] = pd.to_numeric(df['Sustainability'], errors='coerce')
+    df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=['Sustainability'])
+
+    # Sidebar slider for selecting sustainability range
+    min_sust, max_sust = 0, 7  
+    sustainability_range = st.sidebar.slider(
+        "Select a Sustainability Score Range:",
+        min_sust, max_sust, (min_sust, max_sust)
+    )
+
+    # Apply clustering based on sustainability range
+    cluster_name = 'AUR_cluster'  
+    df = sustainability_cluster(df, cluster_name, sustainability_range)
+
+    # Filter data based on selected range
+    df_filtered = df[(df['Sustainability'] >= sustainability_range[0]) & (df['Sustainability'] <= sustainability_range[1])]
+
+######################################################################################################
+
 
     dict = {'Category': df['Category'].unique()[0], 
             'Brands': df['Brand_D2C'].nunique(), 
@@ -118,7 +139,35 @@ if __name__ == '__main__':
         st.plotly_chart(fig, use_container_width=True)
     add_line()
 
+    ###########################################################################################################################
+    
+    context = 'Brand_D2C'
+    sustainability_field = "Sustainability"
+    chart_df = df_filtered[[context, sustainability_field, cluster_name]]
+    chart_df = chart_df.sort_values(context, ascending=True).reset_index(drop=True)
+    chart_df['size'] = 1
 
+    # Generate scatter plot with fixed x-axis range
+    fig = display_scatter_chart(
+        chart_df, _description="E1. Brand Sustainability Score", 
+        x=sustainability_field, y=context, z='size', w='square-open', 
+        v=None, width=1200, height=800, color_discrete_sequence=['white']
+    )
+
+    # Ensure the x-axis limits are always within selected range
+    fig.update_xaxes(range=[sustainability_range[0], sustainability_range[1]])
+
+    # Add brand images to the plot
+    fig = add_brand_image_to_sustainability(
+        fig, chart_df=chart_df, context=context, measure_field=sustainability_field, 
+        clusterName=cluster_name, add_vline='Yes'
+    )
+
+    # Display the plot
+    with st.container(height=800):
+        st.plotly_chart(fig, use_container_width=True)
+
+    add_line()
     
     
     dff2 = streamlit_sidebar_selections_B(dff)

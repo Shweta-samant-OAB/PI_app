@@ -60,32 +60,8 @@ if __name__ == '__main__':
     st.pyplot(fig)
     add_line()
 
-<<<<<<< HEAD
 #####################################################################################################
     cluster_name = 'AUR_cluster' 
-=======
-    #####################################################################################################
-    cluster_name = 'AUR_cluster' 
-    df['Sustainability'] = pd.to_numeric(df['Sustainability'], errors='coerce')
-    df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=['Sustainability'])
-
-    # Sidebar slider for selecting sustainability range
-    min_sust, max_sust = 0, 7  
-    sustainability_range = st.sidebar.slider(
-        "Select a Sustainability Score Range:",
-        min_sust, max_sust, (min_sust, max_sust)
-    )
-
-    # Apply clustering based on sustainability range
-    cluster_name = 'AUR_cluster'  
-    df = sustainable_cluster(df, cluster_name, sustainability_range)
-
-    # Filter data based on selected range
-    df_filtered = df[(df['Sustainability'] >= sustainability_range[0]) & (df['Sustainability'] <= sustainability_range[1])]
-
-######################################################################################################
-
->>>>>>> bc4aef0dd7eee34dcda4576fe0fa7a6db007bf30
 
     df["Sustainability"] = pd.to_numeric(df["Sustainability"], errors="coerce")
     df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["Sustainability"])
@@ -212,7 +188,6 @@ if __name__ == '__main__':
         st.plotly_chart(fig, use_container_width=True)
     add_line()
 
-<<<<<<< HEAD
 ###########################################################################################################################
     
     context = 'Brand_D2C'
@@ -241,37 +216,7 @@ if __name__ == '__main__':
         st.plotly_chart(fig, use_container_width=True)
 
     add_line()
-=======
-    ###########################################################################################################################
-    
-    context = 'Brand_D2C'
-    sustainability_field = "Sustainability"
-    chart_df = df_filtered[[context, sustainability_field, cluster_name]]
-    chart_df = chart_df.sort_values(context, ascending=True).reset_index(drop=True)
-    chart_df['size'] = 1
->>>>>>> bc4aef0dd7eee34dcda4576fe0fa7a6db007bf30
 
-    # Generate scatter plot with fixed x-axis range
-    fig = display_scatter_chart(
-        chart_df, _description="E1. Brand Sustainability Score", 
-        x=sustainability_field, y=context, z='size', w='square-open', 
-        v=None, width=1200, height=800, color_discrete_sequence=['white']
-    )
-
-    # Ensure the x-axis limits are always within selected range
-    fig.update_xaxes(range=[sustainability_range[0], sustainability_range[1]])
-
-    # Add brand images to the plot
-    fig = add_brand_image_to_sustainability(
-        fig, chart_df=chart_df, context=context, measure_field=sustainability_field, 
-        clusterName=cluster_name, add_vline='Yes'
-    )
-
-    # Display the plot
-    with st.container(height=800):
-        st.plotly_chart(fig, use_container_width=True)
-
-    add_line()
     
     
     # dff2 = streamlit_sidebar_selections_B(dff)
@@ -328,12 +273,8 @@ if __name__ == '__main__':
     #     pass
 
     ##############-------Gender mix------------------#####################
-<<<<<<< HEAD
     
     dff2 = processed_gender_mix(dff)
-=======
-    dff2 = gender_mix_distribution(dff)
->>>>>>> bc4aef0dd7eee34dcda4576fe0fa7a6db007bf30
 
     _title = "G1 : Gender-Mix Distribution Brand wise"
 
@@ -378,7 +319,7 @@ if __name__ == '__main__':
         add_line()
 
  
-    dff2 = collaborations_distribution(dff)
+    dff2 = processed_collaborations(dff)
 
     _title = "G2 : Collaborations"
 
@@ -548,9 +489,3 @@ if __name__ == '__main__':
     
     # except:
     #     st.write('Please make a selection!')
-<<<<<<< HEAD
-=======
-
-
- 
->>>>>>> bc4aef0dd7eee34dcda4576fe0fa7a6db007bf30

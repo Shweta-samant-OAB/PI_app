@@ -129,8 +129,15 @@ def cluster_initialise(
     df_[clusterName] = np.where(df_["Brand_D2C"].isin(AUR_cluster), "Yes", "No")
 
     return df_, df_percentile
+    
 
+def sustainable_cluster(df_, clusterName, sustainability_range):
+    """
+    Clusters brands based on their average sustainability scores within a given range.
+    """
+    brand_avg_scores = df_.groupby('Brand_D2C')['Sustainability'].mean().reset_index()
 
+<<<<<<< HEAD
 def sustainability_cluster(df_, clusterName, sustainability_range):
     """
     Clusters brands based on their average sustainability scores within a given range.
@@ -154,6 +161,15 @@ def sustainability_cluster(df_, clusterName, sustainability_range):
 
     # Assign the cluster to the main DataFrame
     df_[clusterName] = np.where(df_["Brand_D2C"].isin(AUR_cluster), "Yes", "No")
+=======
+    brand_avg_scores[clusterName] = np.where(
+        brand_avg_scores['Sustainability'].between(sustainability_range[0], sustainability_range[1]), 'Yes', 'No'
+    )
+
+    AUR_cluster = brand_avg_scores[brand_avg_scores[clusterName] == 'Yes']['Brand_D2C'].unique()
+
+    df_[clusterName] = np.where(df_['Brand_D2C'].isin(AUR_cluster), 'Yes', 'No')
+>>>>>>> bc4aef0dd7eee34dcda4576fe0fa7a6db007bf30
 
     return df_
 
@@ -245,7 +261,13 @@ def add_brand_image_to_scatter(
 
     return fig
 
+def add_brand_image_to_sustainability(fig, chart_df, context, measure_field, clusterName, add_vline='No'):
+    brandLogo_path = Path.cwd().joinpath("brandLogo")
+    
+    for brand in chart_df[context].unique():
+        img_path = os.path.join(brandLogo_path, brand + '.jpg')
 
+<<<<<<< HEAD
 def add_brand_image_to_sustainability(fig, chart_df, context, measure_field, clusterName, add_vline="No", selected_range=None):
     brandLogo_path = Path.cwd().joinpath("brandLogo")
     
@@ -293,6 +315,28 @@ def add_brand_image_to_sustainability(fig, chart_df, context, measure_field, clu
     
     return fig
 
+=======
+        if os.path.exists(img_path):  # Ensure the image exists
+            img_x = chart_df.loc[chart_df[context] == brand, measure_field].values[0]
+            img_y = chart_df.loc[chart_df[context] == brand, context].values[0]
+
+            fig.add_layout_image(
+                x=img_x, y=img_y, 
+                source=Image.open(img_path), 
+                xref="x", yref="y", 
+                sizex=0.5, sizey=0.5,  # Adjusted size
+                xanchor="center", yanchor="middle"
+            )
+
+    if add_vline == 'Yes':
+        min_x = chart_df[chart_df[clusterName] == 'Yes'][measure_field].min()
+        max_x = chart_df[chart_df[clusterName] == 'Yes'][measure_field].max()
+        
+        fig.add_vline(x=min_x, line_width=1, line_color="coral", line_dash="dash")
+        fig.add_vline(x=max_x, line_width=1, line_color="coral", line_dash="dash")
+        
+    return fig
+>>>>>>> bc4aef0dd7eee34dcda4576fe0fa7a6db007bf30
 
 def plot_images_side_by_side(image_paths):
     num_images = len(image_paths)

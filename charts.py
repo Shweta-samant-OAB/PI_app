@@ -479,10 +479,18 @@ def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
     fig.add_vline(x=avg_x, line_dash="solid", line_color="black")
 
     fig.update_layout(
+<<<<<<< HEAD
         xaxis=dict(title=None, zeroline=False, range=[x_min - 1.5, x_max + 1], 
                    showticklabels=False, showgrid=False, autorange="reversed"), 
         yaxis=dict(title=None, zeroline=False, range=[y_min, y_max], 
                    showticklabels=False, showgrid=False),  
+=======
+        # title=title,
+        xaxis=dict(zeroline=False, range=[x_min, x_max], 
+                   showticklabels=False, showgrid=False),
+        yaxis=dict(zeroline=False, range=[y_min, y_max], 
+                   showticklabels=False, showgrid=False),
+>>>>>>> bc4aef0dd7eee34dcda4576fe0fa7a6db007bf30
         width=900,
         height=700,
         margin=dict(l=100, r=50, b=50, t=50),
@@ -536,10 +544,10 @@ def process_collaborations(df):
     return df_filtered
 
 
-def processed_gender_mix(df):
+def gender_mix_distribution(df):
     """Processes only the Gender-Mix column."""
     return process_gender_mix(df)
 
-def processed_collaborations(df):
+def collaborations_distribution(df):
     """Processes only the Collaborations column."""
     return process_collaborations(df)

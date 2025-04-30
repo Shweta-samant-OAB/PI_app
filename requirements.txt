@@ -3,7 +3,7 @@ pandas
 numpy
 plotly
 openpyxl
-matplotlib
 nltk
-st-clickable-images
-scikit-learn
+matplotlib
+sklearn
+st_clickable_images

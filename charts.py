@@ -1,5 +1,3 @@
-
-
 import plotly.figure_factory as ff
 import plotly.express as px
 
@@ -435,12 +433,95 @@ def calculate_relative_scores(df,scale_factor=20):
     return df
 
 # Step 3: Generate Brand Positioning Plot
+# def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
+#     """
+#     Generates an interactive brand positioning scatter plot using Plotly.
+#     Groups elements that are close to each other using DBSCAN clustering.
+#     """
+#     avg_x, avg_y = df[x_col].mean(), df[y_col].mean()
+
+#     # Clustering using DBSCAN
+#     clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(df[[x_col, y_col]])
+#     df['cluster'] = clustering.labels_
+
+#     # Assign colors for each cluster
+#     unique_clusters = df['cluster'].unique()
+#     colors = [f"rgb({np.random.randint(0, 255)}, {np.random.randint(0, 255)}, {np.random.randint(0, 255)})" 
+#               for _ in unique_clusters]
+
+#     fig = go.Figure()
+#     brandLogo_path = Path.cwd().joinpath("brandLogo")
+
+#     for cluster, color in zip(unique_clusters, colors):
+#         subset = df[df['cluster'] == cluster]
+        
+#         for x, y, brandName in zip(subset[x_col], subset[y_col], subset['Brand_D2C']):
+#             fig.add_layout_image(
+#                 x=x, y=y, source=Image.open(os.path.join(brandLogo_path, brandName + '.jpg')),
+#                 xref="x", yref="y", sizex=5, sizey=5, xanchor="center", yanchor="middle"
+#             )
+#         fig.add_trace(go.Scatter(
+#             x=subset[x_col], y=subset[y_col],
+#             mode="markers",
+#             text=subset["Brand_D2C"],
+#             textposition="top center",
+#             marker=dict(size=12,opacity=0, color=color, line=dict(width=1, color="black")),
+#             name=f"Cluster {cluster}",
+#             hovertemplate="<b>%{text}</b><br>" + x_col + ": %{x:.2f}<br>" + y_col + ": %{y:.2f}<extra></extra>"
+#         ))
+
+#     x_min, x_max = df[x_col].min() - 0.5, df[x_col].max() + 0.5
+#     y_min, y_max = df[y_col].min() - 0.5, df[y_col].max() + 0.5
+
+#     fig.add_hline(y=avg_y, line_dash="solid", line_color="black")
+#     fig.add_vline(x=avg_x, line_dash="solid", line_color="black")
+
+#     fig.update_layout(
+#         xaxis=dict(title=None, zeroline=False, range=[x_min - 1.5, x_max + 1], 
+#                    showticklabels=False, showgrid=False, autorange="reversed"), 
+#         yaxis=dict(title=None, zeroline=False, range=[y_min, y_max], 
+#                    showticklabels=False, showgrid=False),  
+#         width=900,
+#         height=700,
+#         margin=dict(l=100, r=50, b=50, t=50),
+#         annotations=[
+#             dict(x=x_min, y=avg_y, text=f"Less {x_col}", showarrow=False, 
+#                  font=dict(size=12, color="black", family="Arial Black"), 
+#                  xanchor="left", yanchor="bottom"),
+            
+#             dict(x=x_max, y=avg_y, text=f"More {x_col}", showarrow=False, 
+#                  font=dict(size=12, color="black", family="Arial Black"), 
+#                  xanchor="right", yanchor="bottom"),
+            
+#             dict(x=avg_x, y=y_max, text=f"More {y_col}", showarrow=False, 
+#                  font=dict(size=12, color="black", family="Arial Black"), 
+#                  xanchor="center", yanchor="bottom"),
+            
+#             dict(x=avg_x, y=y_min, text=f"Less {y_col}", showarrow=False, 
+#                  font=dict(size=12, color="black", family="Arial Black"), 
+#                  xanchor="center", yanchor="top"),
+#         ],
+#         legend_title="Brand Clusters"
+#     )
+
+#     return fig
+
 def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
     """
     Generates an interactive brand positioning scatter plot using Plotly.
     Groups elements that are close to each other using DBSCAN clustering.
     """
-    avg_x, avg_y = df[x_col].mean(), df[y_col].mean()
+    # Calculate ranges to ensure 0,0 intersection
+    x_min, x_max = df[x_col].min(), df[x_col].max()
+    y_min, y_max = df[y_col].min(), df[y_col].max()
+    
+    # Find the maximum absolute value for both axes to ensure symmetric ranges
+    x_range = max(abs(x_min), abs(x_max))
+    y_range = max(abs(y_min), abs(y_max))
+    
+    # Set symmetric ranges around 0
+    x_min, x_max = -x_range - 0.5, x_range + 0.5
+    y_min, y_max = -y_range - 0.5, y_range + 0.5
 
     # Clustering using DBSCAN
     clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(df[[x_col, y_col]])
@@ -460,50 +541,88 @@ def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
         for x, y, brandName in zip(subset[x_col], subset[y_col], subset['Brand_D2C']):
             fig.add_layout_image(
                 x=x, y=y, source=Image.open(os.path.join(brandLogo_path, brandName + '.jpg')),
-                xref="x", yref="y", sizex=5, sizey=5, xanchor="center", yanchor="middle"
+                xref="x", yref="y", sizex=8, sizey=8, xanchor="center", yanchor="middle"
             )
         fig.add_trace(go.Scatter(
             x=subset[x_col], y=subset[y_col],
             mode="markers",
             text=subset["Brand_D2C"],
             textposition="top center",
-            marker=dict(size=12,opacity=0, color=color, line=dict(width=1, color="black")),
+            marker=dict(size=12, opacity=0, color=color, line=dict(width=1, color="black")),
             name=f"Cluster {cluster}",
             hovertemplate="<b>%{text}</b><br>" + x_col + ": %{x:.2f}<br>" + y_col + ": %{y:.2f}<extra></extra>"
         ))
 
-    x_min, x_max = df[x_col].min() - 0.5, df[x_col].max() + 0.5
-    y_min, y_max = df[y_col].min() - 0.5, df[y_col].max() + 0.5
+    # Add center lines at 0,0
+    fig.add_hline(y=0, line_dash="solid", line_color="black")
+    fig.add_vline(x=0, line_dash="solid", line_color="black")
 
-    fig.add_hline(y=avg_y, line_dash="solid", line_color="black")
-    fig.add_vline(x=avg_x, line_dash="solid", line_color="black")
+    # Shorten the axis labels
+    x_label = x_col.split('-')[0] if '-' in x_col else x_col
+    y_label = y_col.split('-')[0] if '-' in y_col else y_col
 
     fig.update_layout(
-        xaxis=dict(title=None, zeroline=False, range=[x_min - 1.5, x_max + 1], 
-                   showticklabels=False, showgrid=False, autorange="reversed"), 
-        yaxis=dict(title=None, zeroline=False, range=[y_min, y_max], 
-                   showticklabels=False, showgrid=False),  
-        width=900,
-        height=700,
+        xaxis=dict(
+            title=None, 
+            zeroline=False, 
+            range=[x_min, x_max], 
+            showticklabels=False, 
+            showgrid=False, 
+            autorange="reversed"
+        ), 
+        yaxis=dict(
+            title=None, 
+            zeroline=False, 
+            range=[y_min, y_max], 
+            showticklabels=False, 
+            showgrid=False
+        ),  
+        width=1000,
+        height=800,
         margin=dict(l=100, r=50, b=50, t=50),
         annotations=[
-            dict(x=x_min, y=avg_y, text=f"Less {x_col}", showarrow=False, 
-                 font=dict(size=12, color="black", family="Arial Black"), 
-                 xanchor="left", yanchor="bottom"),
+            dict(
+                x=x_min, 
+                y=0, 
+                text=f"Less {x_label}", 
+                showarrow=False, 
+                font=dict(size=12, color="black", family="Arial"),
+                xanchor="left", 
+                yanchor="bottom"
+            ),
             
-            dict(x=x_max, y=avg_y, text=f"More {x_col}", showarrow=False, 
-                 font=dict(size=12, color="black", family="Arial Black"), 
-                 xanchor="right", yanchor="bottom"),
+            dict(
+                x=x_max, 
+                y=0, 
+                text=f"More {x_label}", 
+                showarrow=False, 
+                font=dict(size=12, color="black", family="Arial"),
+                xanchor="right", 
+                yanchor="bottom"
+            ),
             
-            dict(x=avg_x, y=y_max, text=f"More {y_col}", showarrow=False, 
-                 font=dict(size=12, color="black", family="Arial Black"), 
-                 xanchor="center", yanchor="bottom"),
+            dict(
+                x=0, 
+                y=y_max, 
+                text=f"More {y_label}", 
+                showarrow=False, 
+                font=dict(size=12, color="black", family="Arial"),
+                xanchor="center", 
+                yanchor="bottom"
+            ),
             
-            dict(x=avg_x, y=y_min, text=f"Less {y_col}", showarrow=False, 
-                 font=dict(size=12, color="black", family="Arial Black"), 
-                 xanchor="center", yanchor="top"),
+            dict(
+                x=0, 
+                y=y_min, 
+                text=f"Less {y_label}", 
+                showarrow=False, 
+                font=dict(size=12, color="black", family="Arial"),
+                xanchor="center", 
+                yanchor="top"
+            ),
         ],
-        legend_title="Brand Clusters"
+        legend_title_font=dict(size=12),
+        legend_font=dict(size=10)
     )
 
     return fig
@@ -511,18 +630,64 @@ def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
 
 
 
-def process_gender_mix(df):
-    df['Gender-Mix'] = df['Gender-Mix'].str.lower().str.strip()
+
+# def process_gender_mix(df):
+#     df['Gender-Mix'] = df['Gender-Mix'].str.lower().str.strip()
     
-    df['Gender-Mix'] = df['Gender-Mix'].replace({
+#     df['Gender-Mix'] = df['Gender-Mix'].replace({
+#         'men': 'Men', 'male': 'Men',
+#         'women': 'Women', 'female': 'Women',
+#         'unisex': 'Unisex'
+#     })
+#     valid_categories = {'Men', 'Women', 'Unisex'}
+#     df['Gender-Mix'] = df['Gender-Mix'].astype(str).str.strip().str.title()
+#     df = df[df['Gender-Mix'].isin(valid_categories)]    
+#     return df
+
+def processed_gender_mix(df):
+    """
+    Process gender mix data for all brands combined.
+    Returns a dataframe with standardized gender categories.
+    """
+    df_copy = df.copy()
+    
+    # Standardize gender categories
+    df_copy['Gender-Mix'] = df_copy['Gender-Mix'].str.lower().str.strip()
+    
+    df_copy['Gender-Mix'] = df_copy['Gender-Mix'].replace({
         'men': 'Men', 'male': 'Men',
         'women': 'Women', 'female': 'Women',
         'unisex': 'Unisex'
     })
+    
+    # Define valid categories and filter
     valid_categories = {'Men', 'Women', 'Unisex'}
-    df['Gender-Mix'] = df['Gender-Mix'].astype(str).str.strip().str.title()
-    df = df[df['Gender-Mix'].isin(valid_categories)]    
-    return df
+    df_copy['Gender-Mix'] = df_copy['Gender-Mix'].astype(str).str.strip().str.title()
+    df_copy = df_copy[df_copy['Gender-Mix'].isin(valid_categories)]
+    
+    return df_copy
+
+def processed_collaborations(df):
+    """
+    Process collaboration data for all brands combined.
+    Returns a dataframe with the most common collaboration types.
+    """
+    df_copy = df.copy()
+    
+    # Clean collaboration data
+    df_copy['Collaborations'] = df_copy['Collaborations'].astype(str).str.strip()
+    
+    # Replace empty values with "None"
+    df_copy.loc[df_copy['Collaborations'].isin(['', 'nan', 'NaN']), 'Collaborations'] = 'None'
+    
+    # Get the top 5 collaboration types
+    top_collabs = df_copy['Collaborations'].value_counts().nlargest(5).index.tolist()
+    
+    # Mark everything else as "Other"
+    df_copy.loc[~df_copy['Collaborations'].isin(top_collabs), 'Collaborations'] = 'Other'
+    
+    return df_copy
+
 
 
 # Function to process collaboration data
@@ -536,9 +701,9 @@ def process_collaborations(df):
     return df_filtered
 
 
-def processed_gender_mix(df):
-    """Processes only the Gender-Mix column."""
-    return process_gender_mix(df)
+# def processed_gender_mix(df):
+#     """Processes only the Gender-Mix column."""
+#     return processed_gender_mix(df)
 
 def processed_collaborations(df):
     """Processes only the Collaborations column."""

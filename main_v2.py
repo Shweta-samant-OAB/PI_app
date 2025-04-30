@@ -13,16 +13,49 @@ import random
 import plotly.figure_factory as ff
 import plotly.express as px
 from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import DBSCAN
 
 from libraries import *
 from charts import *
 from transformation import *
 from streamlit_helper import *
 
+# Import specific functions needed
+from charts import (
+    single_pie_chart_distibution,
+    display_scatter_chart,
+    single_pie_chart_color,
+    calculate_brand_positioning,
+    calculate_relative_scores,
+    plot_brand_positioning
+)
+
+from transformation import (
+    transformLevel0,
+    transformLevel1,
+    transformLevel2
+)
+
+from streamlit_helper import (
+    streamlit_setup,
+    streamlit_sidebar_selections_A,
+    streamlit_sidebar_selections_B,
+    add_line,
+    add_brand_image_to_scatter,
+    show_product_image_and_URL,
+    sustainability_cluster,
+    add_brand_image_to_sustainability,
+    plot_images_side_by_side,
+    data_initialise,
+    pricing_initialise,
+    cluster_initialise
+)
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -60,11 +93,17 @@ if __name__ == '__main__':
     st.pyplot(fig)
     add_line()
 
-#####################################################################################################
+    # Sustainability data preparation
     cluster_name = 'AUR_cluster' 
 
     df["Sustainability"] = pd.to_numeric(df["Sustainability"], errors="coerce")
     df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["Sustainability"])
+
+    # Calculate average sustainability score per brand
+    df_sustainability = df.groupby('Brand_D2C').agg({
+        'Sustainability': 'mean'
+    }).reset_index()
+    df_sustainability[cluster_name] = "Yes"  # All brands are initially in the cluster
 
     # Sidebar slider for selecting sustainability range
     min_sust, max_sust = 0, 7  
@@ -73,329 +112,248 @@ if __name__ == '__main__':
         min_sust, max_sust, (min_sust, max_sust)
     )
 
-    # Apply clustering and get grouped brand scores
-    cluster_name = "AUR_cluster"
-    df_grouped = sustainability_cluster(df, cluster_name, sustainability_range)
+    # Update cluster based on selected range
+    df_sustainability[cluster_name] = np.where(
+        (df_sustainability["Sustainability"] >= sustainability_range[0]) & 
+        (df_sustainability["Sustainability"] <= sustainability_range[1]),
+        "Yes",
+        "No"
+    )
 
-    # Filter brands based on the selected sustainability range
-    df_sustainability = df_grouped[
-        (df_grouped["Sustainability"] >= sustainability_range[0]) & 
-        (df_grouped["Sustainability"] <= sustainability_range[1])
-    ]
+    # Header section with category, brands, and product count
+    dict = {
+        'Category': f"<span style='color:black'>Category: </span><span style='color:#FF8C00'>{df['Category'].unique()[0]}</span>",
+        'Brands': f"<span style='color:black'>Brands: </span><span style='color:#FF8C00'>{df['Brand_D2C'].nunique()}</span>",
+        'Products': f"<span style='color:black'>Products: </span><span style='color:#FF8C00'>{df['Product Image'].nunique()}</span>"
+    }
     
-# print(df_filtered[[context, sustainability_field, cluster_name]])
-
-######################################################################################################
-    dict = {'Category': df['Category'].unique()[0], 
-            'Brands': df['Brand_D2C'].nunique(), 
-            'Products': df['Product Image'].nunique(), 
-            '': '', 
-            '': '', 
-            }
-    add_markdowns_side_by_side(dict)
-    add_line()
+    # Display summary in a single row using columns with minimal spacing
+    cols = st.columns(len(dict), gap="small")
+    for i, (key, value) in enumerate(dict.items()):
+        with cols[i]:
+            st.markdown(f'<p style="font-size:16px;margin:0;padding:0;">{value}</p>', unsafe_allow_html=True)
     
-    col='new_Sub-category'
-    chart_df = transformLevel0(dff, col)
-    _title = 'A. Distribution for ' + col
-    fig = single_pie_chart_distibution(chart_df, col, 'product_count', _title)
-
-    with st.container(height=500):
-        st.plotly_chart(fig, use_container_width=True)
-        
     add_line()
 
-    
-    col='new_Sub-category'
-    chart_df = transformLevel1(dff, col)
-    fig = display_scatter_chart(chart_df, _description="B. Brand Assortment Comparison for " + col, x='Brand_D2C',  y=col, z='product_count%', w='circle', v='Brand_D2C', width=1200, height=600)
-
-    with st.container(height=600):
-        st.plotly_chart(fig, use_container_width=True)
-    add_line()
-
-    
-    col = 'Dominant colour'
-    _title = 'C. Distribution for ' + col
-    fig = single_pie_chart_color(dff, col, _title, height=500, width=500)
-
-    with st.container(height=500):
-        st.plotly_chart(fig, use_container_width=True)
-    add_line()
-
+    # Initialize dff2 before using it in sections
     dff2 = streamlit_sidebar_selections_B(dff)
+    
+    # Apply brand filter to dff2 if any brands are selected
+    if 'selected_brands' in st.session_state and st.session_state.selected_brands:
+        dff2 = dff2[dff2['Brand_D2C'].isin(st.session_state.selected_brands)]
+    
     df_brand_scores = calculate_brand_positioning(dff2)
-    _list = list(dff2['Brand_D2C'].unique())
-    
-    _title = "D : Color Distribution Brand wise"
-  # Get filtered brands
+    df_relative_scores = calculate_relative_scores(df_brand_scores)
 
-    if len(_list) == 0:
-        st.warning("No data available after filtering. Please adjust your selections.")
-    else:
-        # st.subheader("D : Color Distribution Brand wise")
+    # Define category pairs for brand positioning analysis
+    category_pairs = [
+        ("Fashion-forward", "Function-forward"),
+        ("Minimalistic", "Bold"),
+        ("Modern", "Classic"),
+        ("Streetwear", "Luxury-Premium")
+    ]
 
-        # Define layout dynamically (2 columns for better view)
-        num_cols = min(2, len(_list))  # Max 2 columns
-        cols = st.columns(num_cols)
-        col = 'Dominant colour'
-        num_rows = (len(_list) + num_cols - 1) // num_cols
-        
-        fig2 = make_subplots(rows=num_rows, cols=num_cols, subplot_titles=_list,
-                                 specs=[[{"type": "domain"} for _ in range(num_cols)] for _ in range(num_rows)],
+    # Add dropdown sections for different analyses
+    with st.expander("**Brand Analysis**", expanded=True):
+        col='new_Sub-category'
+        chart_df = transformLevel0(dff2, col)
+        _title = 'A. Distribution for Sub-category'
+        fig = single_pie_chart_distibution(chart_df, col, 'product_count', _title)
 
-                             )
-
-        for idx, brand in enumerate(_list):
-            with cols[idx % num_cols]:  # Distribute charts across columns
-                df_filtered = dff2[dff2['Brand_D2C'] == brand]
-                pie = single_pie_chart_color(df_filtered, col, f"{brand}", 400, 400, trace=True)
-                
-                # Add the pie trace directly to the subplot
-                fig2.add_trace(
-                    pie,
-                    row=idx // num_cols + 1,
-                    col=idx % num_cols + 1,
-                )
-
-        with st.container(height=400*num_rows):
-            # st.plotly_chart(fig2, use_container_width=True)
-            fig2.update_layout(height=400*num_rows,title_text = _title )
-            st.plotly_chart(fig2, use_container_width=True)
-
-        st.markdown("---")  
-
-
-            
-    # _title = "E. Price - Complete Distrbution"
-    # st.markdown(f'<p style="color:black;font-size:16px;font-weight:bold;border-radius:2%;"> '+_title+'</p>', unsafe_allow_html=True)
-    # st.dataframe(df_percentile.style.apply(highlight_dataframe_cells, axis=1),width=1000, height=600)
-
-
-
-    context = 'Brand_D2C'
-    chart_df = df_percentile[[context, pricing_cluster_field, clusterName]]
-    chart_df = chart_df.sort_values(context, ascending=True).reset_index()
-    chart_df.drop(columns='index', inplace=True)
-    chart_df['size'] = 1
-    fig = display_scatter_chart(chart_df, _description="E. Brand Cluster basis Pricing for " + pricing_cluster_field, x=pricing_cluster_field, 
-                                y=context, z='size' , w='square-open', v=None, width=1200, height=800, color_discrete_sequence=['white'])
-
-    fig.update_layout(yaxis={"showticklabels": False})
-    fig = add_brand_image_to_scatter(fig, chart_df=chart_df, context=context, measure_field=pricing_cluster_field, clusterName=clusterName, add_vline='Yes')
-
-    with st.container(height=800):
-        st.plotly_chart(fig, use_container_width=True)
-    add_line()
-
-###########################################################################################################################
-    
-    context = 'Brand_D2C'
-    sustainability_field = "Sustainability"
-    chart_df = df_sustainability[[context, sustainability_field, cluster_name]]
-    chart_df = chart_df.sort_values(context, ascending=True).reset_index(drop=True)
-    chart_df['size'] = 1
-
-    # Generate scatter plot with fixed x-axis range
-    fig = display_scatter_chart(
-        chart_df, _description="E1. Brand Sustainability Score", 
-        x=sustainability_field, y=context, z='size', w='square-open', 
-        v=None, width=1200, height=800, color_discrete_sequence=['white']
-    )
-
-    fig.update_xaxes(range=[sustainability_range[0], sustainability_range[1]])
-    fig.update_layout(yaxis={"showticklabels": False})
-    # Add brand images to the plot
-    fig = add_brand_image_to_sustainability(
-        fig, chart_df=chart_df, context=context, measure_field=sustainability_field, 
-        clusterName=cluster_name, add_vline='Yes'
-    )
-
-    # Display the plot
-    with st.container(height=800):
-        st.plotly_chart(fig, use_container_width=True)
-
-    add_line()
-
-    
-    
-    # dff2 = streamlit_sidebar_selections_B(dff)
-    
-    
-    col='new_Type'
-    chart_df = transformLevel2(dff, col)
-    # chart_df_product_count = chart_df.groupby('Brand_D2C')['product_count'].sum().reset_index()
-    # st.dataframe(chart_df_product_count,width=270, height=220)
-
-    fig = display_scatter_chart(chart_df, _description="F. Brand Assortment Comparison for " + col, x='Brand_D2C', y=col, z='product_count%', w='circle', v='Brand_D2C', width=1200, height=600)
-
-    with st.container(height=600):
-        st.plotly_chart(fig, use_container_width=True)
-        
-    add_line()
-    
-    # _list = list(dff2['Brand_D2C'].unique())
-    
-    # _title = "G : Color Distribution Brand wise"
-    # if len(_list)>=4:
-    #     # print("list : ",_list)
-    #     _list = _list[:4]
-    #     col = 'Dominant colour'
-    #     dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
-    #     fig = multi_pie_chart_color(dff2, col, _list, _title = _title, height=800, width=800)
-        
-    #     with st.container(height=800):
-    #         st.plotly_chart(fig, use_container_width=True)
-            
-    #     add_line()
-        
-    # elif len(_list)>=2:
-    #     _list = _list[:2]
-    #     col = 'Dominant colour'
-    #     dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
-    #     fig = multi_pie_chart_color(dff2, col, _list, _title = _title, height=500, width=500)
-
-    #     with st.container(height=500):
-    #         st.plotly_chart(fig, use_container_width=True)
-    #     add_line()
-        
-    # elif len(_list)==1:
-    #     _title = "G : Color Distrbution for " + _list[0]
-    #     col = 'Dominant colour'
-    #     dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
-    #     fig = single_pie_chart_color(dff2, col, _title, height=500, width=500)
-        
-    #     with st.container(height=500):
-    #         st.plotly_chart(fig, use_container_width=True)
-        
-    #     add_line()
-    # else:
-    #     pass
-
-    ##############-------Gender mix------------------#####################
-    
-    dff2 = processed_gender_mix(dff)
-
-    _title = "G1 : Gender-Mix Distribution Brand wise"
-
-    if len(_list) == 0:
-        st.warning("No data available after filtering. Please adjust your selections.")
-    else:
-        # st.subheader("G1 : Gender-Mix Distribution Brand wise")
-
-        # Define layout dynamically (2 columns for better view)
-        num_cols = min(2, len(_list))  # Max 2 columns
-        cols = st.columns(num_cols)
-        col = 'Gender-Mix'
-        num_rows = (len(_list) + num_cols - 1) // num_cols
-        
-        fig2 = make_subplots(rows=num_rows, cols=num_cols, subplot_titles=_list,
-                                 specs=[[{"type": "domain"} for _ in range(num_cols)] for _ in range(num_rows)],
-
-                             )
-
-        for idx, brand in enumerate(_list):
-            with cols[idx % num_cols]:  # Distribute charts across columns
-                df_filtered = dff2[dff2['Brand_D2C'] == brand]
-                pie = single_pie_chart_color(df_filtered, col, f"{brand}", 400, 400, trace=True)
-                
-                pie.update(marker={'colors':['#FF6347', '#4682B4', '#32CD32']})
-
-                
-                # Add the pie trace directly to the subplot
-                fig2.add_trace(
-                    pie,
-                    row=idx // num_cols + 1,
-                    col=idx % num_cols + 1,
-                )
-
-        with st.container(height=400*num_rows):
-            # st.plotly_chart(fig2, use_container_width=True)
-            fig2.update_layout(height=400*num_rows,title_text=_title)
-            st.plotly_chart(fig2, use_container_width=True)
-
-        # st.markdown("---")  
-        
+        with st.container(height=500):
+            st.plotly_chart(fig, use_container_width=True)
         add_line()
 
- 
-    dff2 = processed_collaborations(dff)
+        col='new_Sub-category'
+        chart_df = transformLevel1(dff2, col)
+        fig = display_scatter_chart(chart_df, _description="B. Brand Assortment Comparison for Sub-category", x='Brand_D2C',  y=col, z='product_count%', w='circle', v='Brand_D2C', width=1200, height=600)
 
-    _title = "G2 : Collaborations"
+        with st.container(height=600):
+            st.plotly_chart(fig, use_container_width=True)
+    add_line()
 
-    if len(_list) == 0:
-        st.warning("No data available after filtering. Please adjust your selections.")
-    else:
-        # st.subheader("G2 : Collaborations")
-
-        # Define layout dynamically (2 columns for better view)
-        num_cols = min(2, len(_list))  # Max 2 columns
-        cols = st.columns(num_cols)
-        col = 'Collaborations'
-        num_rows = (len(_list) + num_cols - 1) // num_cols
+    with st.expander("**Color Analysis**", expanded=True):
+        # Brand selection for individual color analysis
+        selected_brands_color = st.sidebar.multiselect(
+            "Select Brands for Color Analysis",
+            options=dff['Brand_D2C'].unique(),
+            default=[]
+        )
         
-        fig2 = make_subplots(rows=num_rows, cols=num_cols, subplot_titles=_list,
-                                 specs=[[{"type": "domain"} for _ in range(num_cols)] for _ in range(num_rows)],
+        col = 'Dominant colour'
+        _title = 'C. Distribution for ' + col
+        fig = single_pie_chart_color(dff, col, _title, height=500, width=500)
 
-                             )
+        with st.container(height=500):
+            st.plotly_chart(fig, use_container_width=True)
 
-        for idx, brand in enumerate(_list):
-            with cols[idx % num_cols]:  # Distribute charts across columns
-                df_filtered = dff2[dff2['Brand_D2C'] == brand]
-                pie = single_pie_chart_color(df_filtered, col, f"{brand}", 400, 400, trace=True)
-                
-                pie.update(marker={'colors':['#FF6347', '#4682B4', '#32CD32']})
-
-                
-                # Add the pie trace directly to the subplot
-                fig2.add_trace(
-                    pie,
-                    row=idx // num_cols + 1,
-                    col=idx % num_cols + 1,
-                )
-
-        with st.container(height=400*num_rows):
-            # st.plotly_chart(fig2, use_container_width=True)
-            fig2.update_layout(height=400*num_rows,title_text=_title)
-            st.plotly_chart(fig2, use_container_width=True)
-
-        st.markdown("---")  
-        
-    # if len(_list) >= 4:
-    #     _list = _list[:4]
-    #     col = 'Collaborations'
-    #     dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
-    #     fig = multi_pie_chart_collaboration(dff2, col, _list, _title=_title, height=800, width=800)
-
-    #     with st.container(height=800):
-    #         st.plotly_chart(fig, use_container_width=True)
-        
-    #     add_line()
-
-    # elif len(_list) >= 2:
-    #     _list = _list[:2]
-    #     col = 'Collaborations'
-    #     dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
-    #     fig = multi_pie_chart_collaboration(dff2, col, _list, _title=_title, height=500, width=500)
-
-    #     with st.container(height=500):
-    #         st.plotly_chart(fig, use_container_width=True)
-        
-    #     add_line()
-
-    # elif len(_list) == 1:
-    #     _title = f"G : Collaborations Distribution for {_list[0]}"
-    #     col = 'Collaborations'
-    #     dff2 = dff2[dff2['Brand_D2C'].isin(_list)]
-    #     fig = single_pie_chart_color(dff2, col, _title, height=500, width=500)
-
-    #     with st.container(height=500):
-    #         st.plotly_chart(fig, use_container_width=True)
-        
-    #     add_line()
+        # Show individual Color distributions if selected
+        if selected_brands_color:
+            add_line()
+            st.markdown("##### Individual Brand Color Distributions")
+            num_brands = len(selected_brands_color)
+            num_rows = (num_brands + 1) // 2
             
+            for row in range(num_rows):
+                cols = st.columns(2)
+                for col_idx in range(2):
+                    brand_idx = row * 2 + col_idx
+                    if brand_idx < num_brands:
+                        brand = selected_brands_color[brand_idx]
+                        with cols[col_idx]:
+                            dff_brand_color = dff[dff['Brand_D2C'] == brand]
+                            _title = f"{brand}"
+                            fig = single_pie_chart_color(dff_brand_color, 'Dominant colour', _title, height=400, width=400)
+                            st.plotly_chart(fig, use_container_width=True)
+    add_line()
 
+    with st.expander("**Sustainability Analysis**", expanded=True):
+        # Section E1: Brand Sustainability Score
+        context = 'Brand_D2C'
+        sustainability_field = "Sustainability"
+        chart_df = df_sustainability[[context, sustainability_field, cluster_name]]
+        chart_df = chart_df.sort_values(context, ascending=True).reset_index(drop=True)
+        chart_df['size'] = 1
 
+        # Generate scatter plot with fixed x-axis range
+        fig = display_scatter_chart(
+            chart_df, _description="Brand Sustainability Score", 
+            x=sustainability_field, y=context, z='size', w='square-open', 
+            v=None, width=1200, height=800, color_discrete_sequence=['white']
+        )
+
+        # Set fixed x-axis range from 0 to 7
+        fig.update_xaxes(range=[0, 7])
+        fig.update_layout(yaxis={"showticklabels": False})
+        
+        # Add brand images to the plot with fixed positions
+        fig = add_brand_image_to_sustainability(
+            fig, chart_df=chart_df, context=context, measure_field=sustainability_field, 
+            clusterName=cluster_name, add_vline='Yes', selected_range=sustainability_range
+        )
+
+        # Display the plot
+        with st.container(height=800):
+            st.plotly_chart(fig, use_container_width=True)
+    add_line()
+
+    with st.expander("**Pricing Analysis**", expanded=True):
+        # Section E: Brand Cluster basis Pricing
+        context = 'Brand_D2C'
+        chart_df = df_percentile[[context, pricing_cluster_field, clusterName]]
+        chart_df = chart_df.sort_values(context, ascending=True).reset_index()
+        chart_df.drop(columns='index', inplace=True)
+        chart_df['size'] = 1
+        fig = display_scatter_chart(chart_df, _description="E. Brand Cluster basis Pricing for " + pricing_cluster_field, x=pricing_cluster_field, 
+                                    y=context, z='size' , w='square-open', v=None, width=1200, height=800, color_discrete_sequence=['white'])
+
+        fig.update_layout(yaxis={"showticklabels": False})
+        fig = add_brand_image_to_scatter(fig, chart_df=chart_df, context=context, measure_field=pricing_cluster_field, clusterName=clusterName, add_vline='Yes')
+
+        with st.container(height=800):
+            st.plotly_chart(fig, use_container_width=True)
+    add_line()
+
+    with st.expander("**Product Type Analysis**", expanded=True):
+        col='new_Type'
+        chart_df = transformLevel2(dff2, col)
+        fig = display_scatter_chart(chart_df, _description="F. Brand Assortment Comparison for " + col, x='Brand_D2C', y=col, z='product_count%', w='circle', v='Brand_D2C', width=1200, height=600)
+
+        with st.container(height=600):
+            st.plotly_chart(fig, use_container_width=True)
+    add_line()
+
+    with st.expander("**Demographic Analysis**", expanded=True):
+        # Brand selection for individual brand view
+        selected_brands_individual = st.sidebar.multiselect(
+            "Select Brands for Gender & Collaborations Analysis",
+            options=dff['Brand_D2C'].unique(),
+            default=[]
+        )
+        
+        # Gender mix section
+        dff_gender = processed_gender_mix(dff)
+        _title = "G1: Overall Gender-Mix Distribution"
+        col = 'Gender-Mix'
+
+        fig = single_pie_chart_color(dff_gender, col, _title, height=500, width=500)
+        for trace in fig.data:
+            trace.marker.colors = ['#FF6347', '#4682B4', '#32CD32']
+
+        with st.container(height=500):
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Show individual Gender-Mix distributions if selected
+        if selected_brands_individual:
+            add_line()
+            st.markdown("##### Individual Brand Gender-Mix Distributions")
+            num_brands = len(selected_brands_individual)
+            num_rows = (num_brands + 1) // 2
+            
+            for row in range(num_rows):
+                cols = st.columns(2)
+                for col_idx in range(2):
+                    brand_idx = row * 2 + col_idx
+                    if brand_idx < num_brands:
+                        brand = selected_brands_individual[brand_idx]
+                        with cols[col_idx]:
+                            dff_brand_gender = processed_gender_mix(dff[dff['Brand_D2C'] == brand])
+                            _title = f"{brand}"
+                            fig = single_pie_chart_color(dff_brand_gender, 'Gender-Mix', _title, height=400, width=400)
+                            for trace in fig.data:
+                                trace.marker.colors = ['#FF6347', '#4682B4', '#32CD32']
+                            st.plotly_chart(fig, use_container_width=True)
+
+        # Collaborations section
+        add_line()
+        dff_collab = processed_collaborations(dff)
+        _title = "G2: Overall Collaborations Distribution"
+        col = 'Collaborations'
+
+        fig = single_pie_chart_color(dff_collab, col, _title, height=500, width=500)
+        for trace in fig.data:
+            trace.marker.colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0', '#FF5722']
+
+        with st.container(height=500):
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Show individual Collaborations distributions if selected
+        if selected_brands_individual:
+            add_line()
+            st.markdown("##### Individual Brand Collaborations Distributions")
+            num_brands = len(selected_brands_individual)
+            num_rows = (num_brands + 1) // 2
+            
+            for row in range(num_rows):
+                cols = st.columns(2)
+                for col_idx in range(2):
+                    brand_idx = row * 2 + col_idx
+                    if brand_idx < num_brands:
+                        brand = selected_brands_individual[brand_idx]
+                        with cols[col_idx]:
+                            dff_brand_collab = processed_collaborations(dff[dff['Brand_D2C'] == brand])
+                            _title = f"{brand}"
+                            fig = single_pie_chart_color(dff_brand_collab, 'Collaborations', _title, height=400, width=400)
+                            for trace in fig.data:
+                                trace.marker.colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0', '#FF5722']
+                            st.plotly_chart(fig, use_container_width=True)
+    add_line()
+
+    with st.expander("**Brand Positioning Analysis**", expanded=True):
+        i = 1
+        for (x_col, y_col) in category_pairs:
+            _title = f'J.{i}.{x_col} vs {y_col}'
+            
+            st.markdown(f'<p style="color:purple;font-size:16px;font-weight:bold;border-radius:2%;"> {_title}</p>', unsafe_allow_html=True)
+            
+            fig = plot_brand_positioning(df_relative_scores, x_col, y_col)
+            st.plotly_chart(fig, use_container_width=True)
+            if i < len(category_pairs):
+                add_line()
+            i += 1
+    add_line()
+
+    # Move Section H here
     _title = "H : Product Image Snapshot"
     col1 = 'Product Image'
     col2 = 'Product URL'
@@ -407,6 +365,22 @@ if __name__ == '__main__':
 
     add_line()
 
+    category_pairs = [
+        ("Fashion-forward", "Function-forward"),
+        ("Minimalistic", "Bold"),
+        ("Modern", "Classic"),
+        ("Streetwear", "Luxury-Premium")
+    ]
+
+    plot_titles = [
+        "Brand Positioning: Fashion vs Function",
+        "Brand Positioning: Minimalist vs Bold",
+        "Brand Positioning: Modern vs Classic",
+        "Brand Positioning: Streetwear vs Luxury"
+    ]
+
+    
+    df_relative_scores = calculate_relative_scores(df_brand_scores)
 
     st.markdown('<h3 style="font-size:16px; font-weight:bold;">📊 Tables and Data</h3>', unsafe_allow_html=True)
 
@@ -445,47 +419,5 @@ if __name__ == '__main__':
 
     st.markdown("---")  
 
-    category_pairs = [
-        ("Fashion-forward", "Function-forward"),
-        ("Minimalistic", "Bold"),
-        ("Modern", "Classic"),
-        ("Streetwear", "Luxury-Premium")
-    ]
-
-    plot_titles = [
-        "Brand Positioning: Fashion vs Function",
-        "Brand Positioning: Minimalist vs Bold",
-        "Brand Positioning: Modern vs Classic",
-        "Brand Positioning: Streetwear vs Luxury"
-    ]
-
-    
-    df_relative_scores = calculate_relative_scores(df_brand_scores)
-
-    st.markdown('<h3 style="font-size:16px; font-weight:bold;">Brand Positioning Analysis</h3>', unsafe_allow_html=True)
-    i = 1
-    for (x_col, y_col) in category_pairs:
-        _title = f'J.{i}.{x_col} vs {y_col}'
-        
-        st.markdown(f'<p style="color:purple;font-size:16px;font-weight:bold;border-radius:2%;"> {_title}</p>', unsafe_allow_html=True)
-        
-        fig = plot_brand_positioning(df_relative_scores, x_col, y_col)
-        st.plotly_chart(fig, use_container_width=True)
-
-        context = 'Brand_D2C'
-        chart_df = df_percentile[[context, pricing_cluster_field, clusterName]]
-        chart_df = chart_df.sort_values(context, ascending=True).reset_index()
-        chart_df.drop(columns='index', inplace=True)
-        chart_df['size'] = 1
-        fig = display_scatter_chart(chart_df, _description="E. Brand Cluster basis Pricing for " + pricing_cluster_field, x=pricing_cluster_field, 
-                                    y=context, z='size' , w='square-open', v=None, width=1200, height=800, color_discrete_sequence=['white'])
-
-        fig.update_layout(yaxis={"showticklabels": False})
-        fig = add_brand_image_to_scatter(fig, chart_df=chart_df, context=context, measure_field=pricing_cluster_field, clusterName=clusterName, add_vline='Yes')
-
-
-        add_line()
-        i += 1
-    
     # except:
     #     st.write('Please make a selection!')

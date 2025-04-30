@@ -389,6 +389,10 @@ def show_product_image_and_URL(df_, col1, col2, product_image):
             except Exception as e:
                 st.error(f"Error loading image: {e}")
                 pass
+
+
+
+
     # stcol1,stcol2  = st.columns(2)
     
     # with stcol1:

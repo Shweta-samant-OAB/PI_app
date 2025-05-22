@@ -15,6 +15,9 @@ import os
 from PIL import Image
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import DBSCAN
+import nltk
+from nltk.corpus import wordnet as wn
+from nltk.stem import WordNetLemmatizer
 
 
 

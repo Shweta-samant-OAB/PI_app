@@ -1,6 +1,5 @@
 import plotly.figure_factory as ff
 import plotly.express as px
-
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 
@@ -412,7 +411,7 @@ def calculate_brand_positioning(df):
     return brand_scores
 
 # Step 2: Calculate Relative Scores
-def calculate_relative_scores(df,scale_factor=40):
+def calculate_relative_scores(df,scale_factor=20):
     """
     Standardizes the fashion attribute scores and rounds them to the nearest 0.5 step.
     """
@@ -687,10 +686,6 @@ def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
     )
 
     return fig
-
-
-
-
 
 # def process_gender_mix(df):
 #     df['Gender-Mix'] = df['Gender-Mix'].str.lower().str.strip()

@@ -87,7 +87,6 @@ if __name__ == '__main__':
     clusterName = 'AUR_cluster'
     dff_price, df_percentile = cluster_initialise(dff, df_percentile, clusterName = clusterName, pricing_cluster_field = pricing_cluster_field, _pricerange = (pricing_values[0], pricing_values[1]))
     
-
     image_paths = list(Path.cwd().joinpath("brandLogo").glob('*.jpg'))
     fig = plot_images_side_by_side(image_paths)
     st.pyplot(fig)
@@ -251,11 +250,16 @@ if __name__ == '__main__':
     with st.expander("**Pricing Analysis**", expanded=True):
         # Section E: Brand Cluster basis Pricing
         context = 'Brand_D2C'
-        chart_df = df_percentile[[context, pricing_cluster_field, clusterName]]
+        
+        # Filter df_percentile using the same brand filter as dff2
+        filtered_percentile = df_percentile[df_percentile['Brand_D2C'].isin(dff2['Brand_D2C'].unique())]
+        chart_df = filtered_percentile[[context, pricing_cluster_field, clusterName]]
+
         chart_df = chart_df.sort_values(context, ascending=True).reset_index()
         chart_df.drop(columns='index', inplace=True)
         chart_df['size'] = 1
-        fig = display_scatter_chart(chart_df, _description="E. Brand Cluster basis Pricing for " + pricing_cluster_field, x=pricing_cluster_field, 
+
+        fig = display_scatter_chart(chart_df, _description="E. Brand Cluster basis Pricing for " + pricing_cluster_field, x=pricing_cluster_field,
                                     y=context, z='size' , w='square-open', v=None, width=1200, height=800, color_discrete_sequence=['white'])
 
         fig.update_layout(yaxis={"showticklabels": False})
@@ -268,11 +272,11 @@ if __name__ == '__main__':
     with st.expander("**Demographic Analysis**", expanded=True):
         # Brand selection for individual brand view
         selected_brands_individual = st.sidebar.multiselect(
-            "Select Brands for Gender & Collaborations Analysis",
+            "Select Brands for Gender Analysis",
             options=dff['Brand_D2C'].unique(),
             default=[]
         )
-        
+
         # Gender mix section
         dff_gender = processed_gender_mix(dff)
         _title = "G1: Overall Gender-Mix Distribution"
@@ -291,7 +295,7 @@ if __name__ == '__main__':
             st.markdown("##### Individual Brand Gender-Mix Distributions")
             num_brands = len(selected_brands_individual)
             num_rows = (num_brands + 1) // 2
-            
+
             for row in range(num_rows):
                 cols = st.columns(2)
                 for col_idx in range(2):
@@ -306,59 +310,6 @@ if __name__ == '__main__':
                                 trace.marker.colors = ['#FF6347', '#4682B4', '#32CD32']
                             st.plotly_chart(fig, use_container_width=True)
 
-        # Collaborations section
-        add_line()
-        dff_collab = processed_collaborations(dff)
-        _title = "G2: Overall Collaborations Distribution"
-        col = 'Collaborations'
-
-        keywords = ["collaborat", "endorse", "celebrity", "athlete", "influencer"]
-        brand_list = [b.lower() for b in dff['Brand_D2C'].unique()]
-
-        def normalize_collaboration(val):
-            val_lower = str(val).strip().lower()
-            if (
-                val in ["", "none", "none evident", "none evident in the image.", "none evident in the provided images.", "-", "nan"]
-                or "none evident" in val
-                or val == "none evident in the image"
-                or val == "none evident in the provided images"
-            ):
-                return "None"
-            return str(val).strip()
-
-        dff_collab['CollabGroup'] = dff_collab['Collaborations'].apply(normalize_collaboration)
-        collab_counts = dff_collab['CollabGroup'].value_counts()
-        categories = collab_counts.index
-        values = collab_counts.values
-
-        fig = go.Figure(data=[go.Pie(labels=categories, values=values, hole=0.2)])
-        fig.update_layout(title_text=_title, height=500, width=500)
-
-        with st.container(height=500):
-            st.plotly_chart(fig, use_container_width=True)
-
-        # Show individual Collaborations distributions if selected
-        if selected_brands_individual:
-            add_line()
-            st.markdown("##### Individual Brand Collaborations Distributions")
-            num_brands = len(selected_brands_individual)
-            num_rows = (num_brands + 1) // 2
-            
-            for row in range(num_rows):
-                cols = st.columns(2)
-                for col_idx in range(2):
-                    brand_idx = row * 2 + col_idx
-                    if brand_idx < num_brands:
-                        brand = selected_brands_individual[brand_idx]
-                        with cols[col_idx]:
-                            dff_brand_collab = processed_collaborations(dff[dff['Brand_D2C'] == brand])
-                            _title = f"{brand}"
-                            fig = single_pie_chart_color(dff_brand_collab, 'Collaborations', _title, height=400, width=400)
-                            for trace in fig.data:
-                                trace.marker.colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0', '#FF5722']
-                            st.plotly_chart(fig, use_container_width=True)
-    add_line()
-
     with st.expander("**Brand Positioning Analysis**", expanded=True):
         i = 1
         for (x_col, y_col) in category_pairs:
@@ -366,6 +317,7 @@ if __name__ == '__main__':
             
             st.markdown(f'<p style="color:purple;font-size:16px;font-weight:bold;border-radius:2%;"> {_title}</p>', unsafe_allow_html=True)
             
+            # Use a smaller min_distance for more crowded plots
             fig = plot_brand_positioning(df_relative_scores, x_col, y_col)
             st.plotly_chart(fig, use_container_width=True)
             if i < len(category_pairs):
@@ -451,7 +403,7 @@ if __name__ == '__main__':
     brand_count = len(df['Brand_D2C'].unique())
     sku_count = df['Product Image'].nunique()
     subcat_count = len(df['new_Sub-category'].unique())
-    summary_points.append(f"• Market Overview: The report showcases {brand_count} brands in the UK market region. {sku_count} SKUs are observed across their D2C websites, spanning {subcat_count} distinct sub-categories.")
+    summary_points.append(f"➤ Market Overview: The report showcases {brand_count} brands in the UK market region. {sku_count} SKUs are observed across their D2C websites, spanning {subcat_count} distinct sub-categories.\n")
     
     # Product Type Analysis
     product_types = df['new_Type'].value_counts()
@@ -461,16 +413,16 @@ if __name__ == '__main__':
     second_type_pct = (product_types.iloc[1] / product_types.sum() * 100).round(1)
     third_type = product_types.index[2]
     third_type_pct = (product_types.iloc[2] / product_types.sum() * 100).round(1)
-    summary_points.append(f"• Product Mix: The assortment primarily consists of {top_type} ({top_type_pct}%), {second_type} ({second_type_pct}%), and {third_type} ({third_type_pct}%), indicating a strong focus on these categories. This distribution suggests a balanced approach to product diversification.")
+    summary_points.append(f"➤ Product Mix: The assortment primarily consists of {top_type} ({top_type_pct}%), {second_type} ({second_type_pct}%), and {third_type} ({third_type_pct}%), indicating a strong focus on these categories. This distribution suggests a balanced approach to product diversification.\n")
     
     # Pricing Analysis
     df['Price'] = pd.to_numeric(df['Price'], errors='coerce')
     median_price = df['Price'].median()
     min_price = df['Price'].min()
     max_price = df['Price'].max()
-    price_range = f"${min_price:.0f} - ${max_price:.0f}"
+    price_range = f"\\${min_price:.0f} - \\${max_price:.0f}"
     price_std = df['Price'].std()
-    summary_points.append(f"• Price Positioning: Products are median priced at ${median_price:.0f}, with a range spanning {price_range}. The standard deviation of ${price_std:.0f} indicates {('significant' if price_std > 100 else 'moderate')} price variation across the market, reflecting diverse market positioning and target segments.")
+    summary_points.append(f"➤ Price Positioning: Products are median priced at \\${median_price:.0f}, with a range spanning {price_range}. The standard deviation of \\${price_std:.0f} indicates {('significant' if price_std > 100 else 'moderate')} price variation across the market, reflecting diverse market positioning and target segments.\n")
     
     # Color Analysis
     color_dist = df['Dominant colour'].value_counts()
@@ -478,7 +430,7 @@ if __name__ == '__main__':
     color_pct = (top_colors.sum() / color_dist.sum() * 100).round(1)
     color_list = ', '.join(top_colors.index)
     color_variety = len(color_dist)
-    summary_points.append(f"• Color Trends: {color_list} dominate the color palette, collectively representing {color_pct}% of the assortment. The market offers {color_variety} distinct color options, demonstrating {('a diverse' if color_variety > 10 else 'a focused')} color strategy.")
+    summary_points.append(f"➤ Color Trends: {color_list} dominate the color palette, collectively representing {color_pct}% of the assortment. The market offers {color_variety} distinct color options, demonstrating {('a diverse' if color_variety > 10 else 'a focused')} color strategy.\n")
     
     # Gender Analysis
     gender_dist = df['Gender-Mix'].value_counts()
@@ -488,10 +440,10 @@ if __name__ == '__main__':
     second_gender_pct = (gender_dist.iloc[1] / gender_dist.sum() * 100).round(1)
     third_gender = gender_dist.index[2] if len(gender_dist) > 2 else None
     third_gender_pct = (gender_dist.iloc[2] / gender_dist.sum() * 100).round(1) if len(gender_dist) > 2 else 0
-    gender_text = f"• Target Audience: The product mix is primarily aimed at {top_gender} ({gender_pct}%), followed by {second_gender} ({second_gender_pct}%)"
+    gender_text = f"➤ Target Audience: The product mix is primarily aimed at {top_gender} ({gender_pct}%), followed by {second_gender} ({second_gender_pct}%)"
     if third_gender:
         gender_text += f" and {third_gender} ({third_gender_pct}%)"
-    gender_text += ". This distribution reflects the market's focus on inclusive product offerings."
+    gender_text += ". This distribution reflects the market\'s focus on inclusive product offerings.\n"
     summary_points.append(gender_text)
     
     # Design Language Analysis
@@ -502,7 +454,7 @@ if __name__ == '__main__':
     top_design = design_scores.idxmax()
     second_design = design_scores.sort_values(ascending=False).index[1]
     third_design = design_scores.sort_values(ascending=False).index[2]
-    design_text = f"• Design Language: Brands predominantly embrace {top_design} and {second_design} design elements, with {third_design} as a significant secondary influence. This combination reflects contemporary market preferences and evolving consumer tastes."
+    design_text = f"➤ Design Language: Brands predominantly embrace {top_design} and {second_design} design elements, with {third_design} as a significant secondary influence. This combination reflects contemporary market preferences and evolving consumer tastes.\n"
     summary_points.append(design_text)
     
     # Fashion vs Function Analysis
@@ -511,10 +463,10 @@ if __name__ == '__main__':
     fashion_score = df['Fashion-forward'].mean()
     function_score = df['Function-forward'].mean()
     if abs(fashion_score - function_score) < 0.2:
-        summary_points.append("• Brand Positioning: Brands demonstrate a balanced approach between fashion and function, with equal emphasis on both aspects. This equilibrium suggests a market that values both aesthetic appeal and practical utility.")
+        summary_points.append("➤ Brand Positioning: Brands demonstrate a balanced approach between fashion and function, with equal emphasis on both aspects. This equilibrium suggests a market that values both aesthetic appeal and practical utility.")
     else:
         dominant = "fashion" if fashion_score > function_score else "function"
-        summary_points.append(f"• Brand Positioning: The market shows a {('strong' if abs(fashion_score - function_score) > 0.5 else 'slight')} inclination towards {dominant}-oriented products, while maintaining a balanced portfolio. This indicates a market that prioritizes {dominant} while ensuring versatility in product offerings.")
+        summary_points.append(f"➤ Brand Positioning: The market shows a {('strong' if abs(fashion_score - function_score) > 0.5 else 'slight')} inclination towards {dominant}-oriented products, while maintaining a balanced portfolio. This indicates a market that prioritizes {dominant} while ensuring versatility in product offerings.\n")
     
     # Sustainability Analysis
     df['Sustainability'] = pd.to_numeric(df['Sustainability'], errors='coerce')
@@ -522,36 +474,28 @@ if __name__ == '__main__':
     sustainable_brands = sustainability_scores[sustainability_scores > 5].index.tolist()
     avg_sustainability = df['Sustainability'].mean()
     if sustainable_brands:
-        sustainability_text = f"• Sustainability Focus: Brands like {', '.join(sustainable_brands[:3])} lead in sustainability initiatives, while others maintain a neutral stance. With an average sustainability score of {avg_sustainability:.1f}, the market shows {('strong' if avg_sustainability > 5 else 'moderate')} commitment to eco-conscious practices."
+        sustainability_text = f"➤ Sustainability Focus: Brands like {', '.join(sustainable_brands[:3])} lead in sustainability initiatives, while others maintain a neutral stance. With an average sustainability score of {avg_sustainability:.1f}, the market shows {('strong' if avg_sustainability > 5 else 'moderate')} commitment to eco-conscious practices."
     else:
-        sustainability_text = f"• Sustainability Focus: The market shows varying levels of commitment to sustainability, with an average score of {avg_sustainability:.1f}. This indicates {('room for improvement' if avg_sustainability < 4 else 'a growing awareness')} in sustainable practices."
+        sustainability_text = f"➤ Sustainability Focus: The market shows varying levels of commitment to sustainability, with an average score of {avg_sustainability:.1f}. This indicates {('room for improvement' if avg_sustainability < 4 else 'a growing awareness')} in sustainable practices.\n"
     summary_points.append(sustainability_text)
 
     # Market Insights
     # Price-Value Analysis
     price_value_ratio = df['Price'].mean() / df['Sustainability'].mean()
-    summary_points.append(f"• Price-Value Proposition: The market demonstrates a {('strong' if price_value_ratio < 50 else 'moderate')} price-value relationship, with brands balancing premium pricing against product features and sustainability initiatives.")
+    summary_points.append(f"➤ Price-Value Proposition: The market demonstrates a {('strong' if price_value_ratio < 50 else 'moderate')} price-value relationship, with brands balancing premium pricing against product features and sustainability initiatives.\n")
 
     # Brand Concentration
     top_brands = df['Brand_D2C'].value_counts().head(3)
     top_brands_pct = (top_brands.sum() / len(df) * 100).round(1)
-    summary_points.append(f"• Market Concentration: The top 3 brands account for {top_brands_pct}% of the market, indicating {('a concentrated' if top_brands_pct > 50 else 'a diverse')} market structure with {('established market leaders' if top_brands_pct > 50 else 'opportunities for new entrants')}.")
+    summary_points.append(f"➤ Market Concentration: The top 3 brands account for {top_brands_pct}% of the market, indicating {('a concentrated' if top_brands_pct > 50 else 'a diverse')} market structure with {('established market leaders' if top_brands_pct > 50 else 'opportunities for new entrants')}.\n")
 
     # Product Innovation
     unique_combinations = len(df[['new_Type', 'Dominant colour', 'Gender-Mix']].drop_duplicates())
-    summary_points.append(f"• Product Innovation: With {unique_combinations} unique product combinations across types, colors, and gender categories, the market shows {('high' if unique_combinations > 50 else 'moderate')} levels of product innovation and customization.")
-
-    # Concluding Analysis
-    summary_points.append("\nMarket Outlook and Strategic Implications:")
-    summary_points.append("1. Market Maturity: The UK footwear market demonstrates a balanced mix of established players and emerging brands, with a strong focus on product diversification and innovation.")
-    summary_points.append("2. Consumer Preferences: The market shows a clear preference for versatile, fashion-forward products that maintain functional aspects, indicating a sophisticated consumer base.")
-    summary_points.append("3. Competitive Landscape: The presence of multiple price points and design approaches suggests a healthy competitive environment with room for both premium and value-oriented brands.")
-    summary_points.append("4. Future Opportunities: Areas for growth include enhanced sustainability initiatives, expanded gender-neutral offerings, and further innovation in product design and materials.")
-    summary_points.append("5. Strategic Recommendations: Brands should focus on balancing fashion and function, expanding sustainable practices, and maintaining competitive pricing while delivering value through innovation and quality.")
+    summary_points.append(f"➤ Product Innovation: With {unique_combinations} unique product combinations across types, colors, and gender categories, the market shows {('high' if unique_combinations > 50 else 'moderate')} levels of product innovation and customization.\n")
     
     # Display the summary
     summary_text = "\n".join(summary_points)
-    st.markdown(f'<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; line-height: 1.6;">{summary_text}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; line-height: 1.6; white-space: normal;">{summary_text}</div>', unsafe_allow_html=True)
 
     # except:
     #     st.write('Please make a selection!')

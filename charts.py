@@ -58,47 +58,97 @@ def display_frequency_bar_chart(df_, _description, col, height, width):
 
 
 
-def single_pie_chart_color(df_, col, _title, height, width,trace=False):
-    if not df_.empty:
-        dftemp = color_frequency(df_, col)
-        categories = dftemp[col]
-        values = dftemp['word_freq']
-        colors = dftemp['color_HEX']
+# def single_pie_chart_color(df_, col, _title, height, width,trace=False):
+#     if not df_.empty:
+#         dftemp = color_frequency(df_, col)
+#         categories = dftemp[col]
+#         values = dftemp['word_freq']
+#         colors = dftemp['color_HEX']
 
-        # Return a Pie trace directly
-        if trace:
-            return go.Pie(labels=categories, values=values, marker=dict(colors=colors), hole=0.1, name=_title)
-        fig = make_subplots()
-        fig.add_trace(go.Pie(labels=categories, values=values, marker=dict(colors=colors), hole=0.1))      
-        fig.update_traces(marker=dict(line=dict(color='black', width=0.1)))
-        fig.update_layout(title_text=_title, height=height, width=width, plot_bgcolor='white',paper_bgcolor='white',
-                          xaxis=dict(showgrid=True,  gridcolor='#EDF1F2'),yaxis=dict(showgrid=True,  gridcolor='#EDF1F2'))
+#         # Return a Pie trace directly
+#         if trace:
+#             return go.Pie(labels=categories, values=values, marker=dict(colors=colors), hole=0.1, name=_title)
+#         fig = make_subplots()
+#         fig.add_trace(go.Pie(labels=categories, values=values, marker=dict(colors=colors), hole=0.1))      
+#         fig.update_traces(marker=dict(line=dict(color='black', width=0.1)))
+#         fig.update_layout(title_text=_title, height=height, width=width, plot_bgcolor='white',paper_bgcolor='white',
+#                           xaxis=dict(showgrid=True,  gridcolor='#EDF1F2'),yaxis=dict(showgrid=True,  gridcolor='#EDF1F2'))
         
-        return fig
+#         return fig
 
-# def single_pie_chart_color(df_, col, _title, height, width):
+# # def single_pie_chart_color(df_, col, _title, height, width):
+#     if df_.empty:
+#         return None
+
+#     df_Dict = color_frequency_brand(df_, col, df_['Brand_D2C'].unique())
+
+#     labels = df_Dict[col]
+#     values = df_Dict['word_freq']
+#     colors = df_Dict['color_HEX']
+
+#     fig = go.Figure(data=[go.Pie(
+#         labels=labels, 
+#         values=values, 
+#         marker=dict(colors=colors), 
+#         hole=0.2  # Make it look cleaner
+#     )])
+
+#     fig.update_layout(
+#         title_text=_title,
+#         height=height, 
+#         width=width, 
+#         plot_bgcolor='white',
+#         paper_bgcolor='white'
+#     )
+
+#     return fig
+def single_pie_chart_color(df_, col, _title, height, width, trace=False):
     if df_.empty:
         return None
 
-    df_Dict = color_frequency_brand(df_, col, df_['Brand_D2C'].unique())
+    # Get frequency of each unique value in the column using your helper
+    dftemp = color_frequency(df_, col)
 
-    labels = df_Dict[col]
-    values = df_Dict['word_freq']
-    colors = df_Dict['color_HEX']
+    # Filter out rows where 'col' is purely numeric or blank/NaN
+    dftemp = dftemp[
+        ~dftemp[col].astype(str).str.match(r'^\d+$') &  # Remove values like "13"
+        dftemp[col].astype(str).str.strip().ne('') &    # Remove empty strings
+        dftemp[col].notna()                             # Remove NaN
+    ]
 
-    fig = go.Figure(data=[go.Pie(
-        labels=labels, 
-        values=values, 
-        marker=dict(colors=colors), 
-        hole=0.2  # Make it look cleaner
-    )])
+    # Extract cleaned categories, values, and their associated colors
+    categories = dftemp[col]
+    values = dftemp['word_freq']
+    colors = dftemp['color_HEX']
 
+    # Return trace if trace flag is True
+    if trace:
+        return go.Pie(
+            labels=categories,
+            values=values,
+            marker=dict(colors=colors),
+            hole=0.1,
+            name=_title
+        )
+
+    # Otherwise return a full figure
+    fig = make_subplots()
+    fig.add_trace(go.Pie(
+        labels=categories,
+        values=values,
+        marker=dict(colors=colors),
+        hole=0.1
+    ))
+
+    fig.update_traces(marker=dict(line=dict(color='black', width=0.1)))
     fig.update_layout(
         title_text=_title,
-        height=height, 
-        width=width, 
+        height=height,
+        width=width,
         plot_bgcolor='white',
-        paper_bgcolor='white'
+        paper_bgcolor='white',
+        xaxis=dict(showgrid=True, gridcolor='#EDF1F2'),
+        yaxis=dict(showgrid=True, gridcolor='#EDF1F2')
     )
 
     return fig

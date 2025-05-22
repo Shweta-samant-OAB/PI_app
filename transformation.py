@@ -125,3 +125,41 @@ def get_stats(df_, field):
     
     return dfperc
 
+# Function to process Gender Mix
+# def process_gender_mix(df):
+#     df['Gender Mix'] = df['Gender Mix'].str.lower().str.strip()
+#     df['Gender Mix'] = df['Gender Mix'].replace(
+#         {'male': 'Men', 'men': 'Men', 'female': 'Women', 'women': 'Women'}
+#     )
+#     df['Gender Mix'] = df['Gender Mix'].apply(lambda x: 'Unisex' if 'unisex' in str(x) else x)
+#     return df
+
+# # Function to process Sustainability Scores
+# def process_sustainability(df):
+#     df['Sustainability Score'] = pd.to_numeric(df['Sustainability Score'], errors='coerce')
+#     sustainability_avg = df.groupby('Brand_D2C')['Sustainability Score'].mean().reset_index()
+
+#     def categorize_sustainability(score):
+#         if score >= 5:
+#             return 'Sustainable'
+#         elif 2 <= score < 5:
+#             return 'Partially Sustainable'
+#         else:
+#             return 'Non-Sustainable'
+
+#     sustainability_avg['Sustainability'] = sustainability_avg['Sustainability Score'].apply(categorize_sustainability)
+#     df = df.merge(sustainability_avg[['Brand_D2C', 'Sustainability']], on='Brand_D2C', how='left')
+#     return df
+
+# # Function to process Collaborations
+# def process_collaborations(df):
+#     df['Collaborations'] = df['Collaborations'].str.lower().str.strip()
+#     df['Collaborations'] = df['Collaborations'].apply(lambda x: 'None' if 'none' in str(x) else x)
+#     return df
+
+# # Main function to process data
+# def preprocess_data(dff2):
+#     dff2 = process_gender_mix(dff2)
+#     dff2 = process_sustainability(dff2)
+#     dff2 = process_collaborations(dff2)
+#     return dff2

@@ -296,7 +296,7 @@ def add_brand_image_to_sustainability(fig, chart_df, context, measure_field, clu
 
 def plot_images_side_by_side(image_paths):
     num_images = len(image_paths)
-    fig, axes = plt.subplots(1, num_images, figsize=(20, 6))  # Adjust figsize as needed
+    fig, axes = plt.subplots(1, num_images, figsize=(40, 20))  # Adjusted figsize for better display
     for i, img_path in enumerate(image_paths):
         img = mpimg.imread(img_path)
         axes[i].imshow(img)

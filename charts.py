@@ -412,7 +412,7 @@ def calculate_brand_positioning(df):
     return brand_scores
 
 # Step 2: Calculate Relative Scores
-def calculate_relative_scores(df,scale_factor=20):
+def calculate_relative_scores(df,scale_factor=40):
     """
     Standardizes the fashion attribute scores and rounds them to the nearest 0.5 step.
     """
@@ -425,7 +425,6 @@ def calculate_relative_scores(df,scale_factor=20):
     
     scaler = StandardScaler()
     df[cols_to_scale] = scaler.fit_transform(df[cols_to_scale]) * scale_factor
-    # df[cols_to_scale] = scaler.fit_transform(df[cols_to_scale])
     
     df[cols_to_scale] = np.round(df[cols_to_scale] * 2) / 2  
     df.to_csv("df1.csv", index=False)
@@ -519,38 +518,98 @@ def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
     x_range = max(abs(x_min), abs(x_max))
     y_range = max(abs(y_min), abs(y_max))
     
-    # Set symmetric ranges around 0
-    x_min, x_max = -x_range - 0.5, x_range + 0.5
-    y_min, y_max = -y_range - 0.5, y_range + 0.5
+    # Set symmetric ranges around 0 with extra padding for text
+    x_min, x_max = -x_range - 2.5, x_range + 2.5  # Increased padding
+    y_min, y_max = -y_range - 2.5, y_range + 2.5  # Increased padding
 
     # Clustering using DBSCAN
     clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(df[[x_col, y_col]])
     df['cluster'] = clustering.labels_
 
+    # Define a color palette with darker, more visible colors
+    color_palette = [
+        '#000080',  # Navy Blue
+        '#8B0000',  # Dark Red
+        '#006400',  # Dark Green
+        '#4B0082',  # Indigo
+        '#800000',  # Maroon
+        '#556B2F',  # Dark Olive Green
+        '#8B4513',  # Saddle Brown
+        '#483D8B',  # Dark Slate Blue
+        '#2F4F4F',  # Dark Slate Gray
+        '#8B008B'   # Dark Magenta
+    ]
+
     # Assign colors for each cluster
     unique_clusters = df['cluster'].unique()
-    colors = [f"rgb({np.random.randint(0, 255)}, {np.random.randint(0, 255)}, {np.random.randint(0, 255)})" 
-              for _ in unique_clusters]
+    colors = [color_palette[i % len(color_palette)] for i in range(len(unique_clusters))]
 
     fig = go.Figure()
-    brandLogo_path = Path.cwd().joinpath("brandLogo")
+
+    def get_text_position_and_offset(x, y, all_points, index):
+        # Base position based on quadrant
+        if x >= 0 and y >= 0:  # Top right
+            base_pos = "top right"
+            x_offset = 0.2
+            y_offset = 0.2
+        elif x < 0 and y >= 0:  # Top left
+            base_pos = "top left"
+            x_offset = -0.2
+            y_offset = 0.2
+        elif x >= 0 and y < 0:  # Bottom right
+            base_pos = "bottom right"
+            x_offset = 0.2
+            y_offset = -0.2
+        else:  # Bottom left
+            base_pos = "bottom left"
+            x_offset = -0.2
+            y_offset = -0.2
+
+        # Check for nearby points
+        for i, (other_x, other_y) in enumerate(all_points):
+            if i != index:
+                # Calculate distance
+                dist = ((x - other_x) ** 2 + (y - other_y) ** 2) ** 0.5
+                if dist < 1.0:  # Increased threshold for nearby points
+                    # Adjust offset based on relative position
+                    if abs(x - other_x) < 0.6:  # Increased threshold
+                        y_offset *= 3.0  # Increased multiplier
+                    if abs(y - other_y) < 0.6:  # Increased threshold
+                        x_offset *= 3.0  # Increased multiplier
+
+        return base_pos, x_offset, y_offset
 
     for cluster, color in zip(unique_clusters, colors):
         subset = df[df['cluster'] == cluster]
+        points = list(zip(subset[x_col], subset[y_col]))
         
-        for x, y, brandName in zip(subset[x_col], subset[y_col], subset['Brand_D2C']):
-            fig.add_layout_image(
-                x=x, y=y, source=Image.open(os.path.join(brandLogo_path, brandName + '.jpg')),
-                xref="x", yref="y", sizex=8, sizey=8, xanchor="center", yanchor="middle"
-            )
+        # Calculate positions and offsets for each point
+        positions = []
+        x_offsets = []
+        y_offsets = []
+        
+        for i, (x, y) in enumerate(points):
+            pos, x_off, y_off = get_text_position_and_offset(x, y, points, i)
+            positions.append(pos)
+            x_offsets.append(x_off)
+            y_offsets.append(y_off)
+        
         fig.add_trace(go.Scatter(
-            x=subset[x_col], y=subset[y_col],
-            mode="markers",
+            x=subset[x_col], 
+            y=subset[y_col],
+            mode="text",
             text=subset["Brand_D2C"],
-            textposition="top center",
-            marker=dict(size=12, opacity=0, color=color, line=dict(width=1, color="black")),
+            textposition=positions,
+            textfont=dict(
+                size=12,
+                family="Arial",
+                color=color
+            ),
             name=f"Cluster {cluster}",
-            hovertemplate="<b>%{text}</b><br>" + x_col + ": %{x:.2f}<br>" + y_col + ": %{y:.2f}<extra></extra>"
+            hovertemplate="<b>%{text}</b><br>" + 
+                         x_col + ": %{x:.2f}<br>" + 
+                         y_col + ": %{y:.2f}<br>" +
+                         "Cluster: " + str(cluster) + "<extra></extra>"
         ))
 
     # Add center lines at 0,0
@@ -577,9 +636,9 @@ def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
             showticklabels=False, 
             showgrid=False
         ),  
-        width=1000,
-        height=800,
-        margin=dict(l=100, r=50, b=50, t=50),
+        width=1600,  # Increased width
+        height=1200,  # Increased height
+        margin=dict(l=150, r=150, b=150, t=150),  # Increased margins
         annotations=[
             dict(
                 x=x_min, 
@@ -622,7 +681,9 @@ def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
             ),
         ],
         legend_title_font=dict(size=12),
-        legend_font=dict(size=10)
+        legend_font=dict(size=10),
+        hovermode="closest",
+        plot_bgcolor='white'
     )
 
     return fig

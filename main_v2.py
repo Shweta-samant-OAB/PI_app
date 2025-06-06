@@ -512,7 +512,7 @@ with st.expander("**🏃‍♂️ Athletic vs Fashion Classification**", expande
     st.plotly_chart(fig_pie, use_container_width=True)
     
     # Create and display the Graphviz hierarchy chart below the pie chart
-    st.markdown("#### Footwear Classification Hierarchy Tree")
+    # st.markdown("#### Footwear Classification Hierarchy Tree")
     dot_chart = create_graphviz_hierarchy_chart(dff_classified)
     st.graphviz_chart(dot_chart)
     
@@ -529,7 +529,7 @@ with st.expander("**🎨 Aesthetic Breakdown Classification**", expanded=True):
     aesthetic_coverage = round((products_with_aesthetics / total_aesthetic_products * 100), 1)
     
     # Create and display the Graphviz hierarchy chart showing the relationship
-    st.markdown("#### Functionality → Aesthetic Family Hierarchy Tree")
+    # st.markdown("#### Functionality → Aesthetic Family Hierarchy Tree")
     try:
         dot_chart_cross = create_functionality_aesthetic_graphviz_chart(dff_aesthetic)
         if dot_chart_cross is not None:
@@ -541,18 +541,19 @@ with st.expander("**🎨 Aesthetic Breakdown Classification**", expanded=True):
 
 # Add brand-wise aesthetic distribution table
 # Add brand-wise aesthetic distribution table
-st.markdown("#### 🧠 Brand-level Aesthetic Distribution Table")
+with st.expander("### 🧠 Brand-level Aesthetic Distribution Table", expanded=True):
+# st.markdown("#### 🧠 Brand-level Aesthetic Distribution Table")
 
-try:
-    brand_aesthetic_df = create_brand_aesthetic_table(dff_aesthetic)
-
-    if not brand_aesthetic_df.empty:
-        st.dataframe(brand_aesthetic_df, use_container_width=True)
-    else:
-        st.warning("No aesthetic data found for brands.")
-
-except Exception as e:
-    st.error(f"Error generating aesthetic distribution table: {str(e)}")
+    try:
+        brand_aesthetic_df = create_brand_aesthetic_table(dff_aesthetic)
+    
+        if not brand_aesthetic_df.empty:
+            st.dataframe(brand_aesthetic_df, use_container_width=True)
+        else:
+            st.warning("No aesthetic data found for brands.")
+    
+    except Exception as e:
+        st.error(f"Error generating aesthetic distribution table: {str(e)}")
 
 
 

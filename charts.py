@@ -1,4 +1,4 @@
-import plotly.figure_factory as ff
+
 import plotly.express as px
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
@@ -15,16 +15,18 @@ import os
 from PIL import Image
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import DBSCAN
-import nltk
-from nltk.corpus import wordnet as wn
-from nltk.stem import WordNetLemmatizer
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import graphviz
+import streamlit as st
 
 
 
 def display_scatter_chart(df_, _description, x, y, z, w, v, width, height, color_discrete_sequence=px.colors.qualitative.Light24):
     if df_.empty is False:
         fig = px.scatter(df_, x=x, y=y, title=_description, size=z, color=v, size_max=40,
-                         color_discrete_sequence=color_discrete_sequence)
+                          color_discrete_sequence=color_discrete_sequence)
         fig.update_traces(marker=dict(symbol=w))
         fig.update_layout(autosize=False, width=width, height=height, plot_bgcolor='white',paper_bgcolor='white',
                           xaxis=dict(showgrid=True,  gridcolor='#EDF1F2'),yaxis=dict(showgrid=True,  gridcolor='#EDF1F2'),showlegend=False)
@@ -34,7 +36,7 @@ def display_scatter_chart(df_, _description, x, y, z, w, v, width, height, color
 def display_multi_scatter_chart(df_, _description, x, y, z, w, v, width, height, color_discrete_sequence=px.colors.qualitative.Light24):
     if df_.empty is False:
         fig = px.scatter(df_, x=x, y=y, title=_description, size=z, color=v, size_max=40,
-                         color_discrete_sequence=color_discrete_sequence)
+                          color_discrete_sequence=color_discrete_sequence)
         fig.update_traces(marker=dict(symbol=w))
         fig.update_layout(autosize=False, width=width, height=height, plot_bgcolor='white',paper_bgcolor='white',xaxis=dict(showgrid=True,  gridcolor='#EDF1F2'),yaxis=dict(showgrid=True,  gridcolor='#EDF1F2'))
         return fig
@@ -61,97 +63,49 @@ def display_frequency_bar_chart(df_, _description, col, height, width):
 
 
 
-# def single_pie_chart_color(df_, col, _title, height, width,trace=False):
-#     if not df_.empty:
-#         dftemp = color_frequency(df_, col)
-#         categories = dftemp[col]
-#         values = dftemp['word_freq']
-#         colors = dftemp['color_HEX']
-
-#         # Return a Pie trace directly
-#         if trace:
-#             return go.Pie(labels=categories, values=values, marker=dict(colors=colors), hole=0.1, name=_title)
-#         fig = make_subplots()
-#         fig.add_trace(go.Pie(labels=categories, values=values, marker=dict(colors=colors), hole=0.1))      
-#         fig.update_traces(marker=dict(line=dict(color='black', width=0.1)))
-#         fig.update_layout(title_text=_title, height=height, width=width, plot_bgcolor='white',paper_bgcolor='white',
-#                           xaxis=dict(showgrid=True,  gridcolor='#EDF1F2'),yaxis=dict(showgrid=True,  gridcolor='#EDF1F2'))
+def single_pie_chart_color(df_, col, _title, height, width,trace=False):
+    if not df_.empty:  
+        dftemp = color_frequency(df_, col)
+        categories = dftemp[col]
+        values = dftemp['word_freq']
+        colors = dftemp['color_HEX']
         
-#         return fig
+        # Or map them to proper colors (uncomment if you want to keep these values)
+        # df_copy.loc[df_copy[col].str.match(numeric_pattern), col] = 'other'
+        # Return a Pie trace directly
+        if trace:
+            return go.Pie(labels=categories, values=values, marker=dict(colors=colors), hole=0.1, name=_title)
+        fig = make_subplots()
+        fig.add_trace(go.Pie(labels=categories, values=values, marker=dict(colors=colors), hole=0.1))      
+        fig.update_traces(marker=dict(line=dict(color='black', width=0.1)))
+        fig.update_layout(title_text=_title, height=height, width=width, plot_bgcolor='white',paper_bgcolor='white',
+                          xaxis=dict(showgrid=True,  gridcolor='#EDF1F2'),yaxis=dict(showgrid=True,  gridcolor='#EDF1F2'))
+        
+        return fig
 
-# # def single_pie_chart_color(df_, col, _title, height, width):
-#     if df_.empty:
-#         return None
-
-#     df_Dict = color_frequency_brand(df_, col, df_['Brand_D2C'].unique())
-
-#     labels = df_Dict[col]
-#     values = df_Dict['word_freq']
-#     colors = df_Dict['color_HEX']
-
-#     fig = go.Figure(data=[go.Pie(
-#         labels=labels, 
-#         values=values, 
-#         marker=dict(colors=colors), 
-#         hole=0.2  # Make it look cleaner
-#     )])
-
-#     fig.update_layout(
-#         title_text=_title,
-#         height=height, 
-#         width=width, 
-#         plot_bgcolor='white',
-#         paper_bgcolor='white'
-#     )
-
-#     return fig
-def single_pie_chart_color(df_, col, _title, height, width, trace=False):
+# def single_pie_chart_color(df_, col, _title, height, width):
     if df_.empty:
         return None
 
-    # Get frequency of each unique value in the column using your helper
-    dftemp = color_frequency(df_, col)
+    df_Dict = color_frequency_brand(df_, col, df_['Brand_D2C'].unique())
 
-    # Filter out rows where 'col' is purely numeric or blank/NaN
-    dftemp = dftemp[
-        ~dftemp[col].astype(str).str.match(r'^\d+$') &  # Remove values like "13"
-        dftemp[col].astype(str).str.strip().ne('') &    # Remove empty strings
-        dftemp[col].notna()                             # Remove NaN
-    ]
+    labels = df_Dict[col]
+    values = df_Dict['word_freq']
+    colors = df_Dict['color_HEX']
 
-    # Extract cleaned categories, values, and their associated colors
-    categories = dftemp[col]
-    values = dftemp['word_freq']
-    colors = dftemp['color_HEX']
+    fig = go.Figure(data=[go.Pie(
+        labels=labels, 
+        values=values, 
+        marker=dict(colors=colors), 
+        hole=0.2  # Make it look cleaner
+    )])
 
-    # Return trace if trace flag is True
-    if trace:
-        return go.Pie(
-            labels=categories,
-            values=values,
-            marker=dict(colors=colors),
-            hole=0.1,
-            name=_title
-        )
-
-    # Otherwise return a full figure
-    fig = make_subplots()
-    fig.add_trace(go.Pie(
-        labels=categories,
-        values=values,
-        marker=dict(colors=colors),
-        hole=0.1
-    ))
-
-    fig.update_traces(marker=dict(line=dict(color='black', width=0.1)))
     fig.update_layout(
         title_text=_title,
-        height=height,
-        width=width,
+        height=height, 
+        width=width, 
         plot_bgcolor='white',
-        paper_bgcolor='white',
-        xaxis=dict(showgrid=True, gridcolor='#EDF1F2'),
-        yaxis=dict(showgrid=True, gridcolor='#EDF1F2')
+        paper_bgcolor='white'
     )
 
     return fig
@@ -343,10 +297,10 @@ def histogram_pricing_chart(df_, BrandList, col):
         p = 0
         for m in range(n):
             fig.add_trace(go.Histogram(x=df_Dict[BrandList[p]][col], name=BrandList[p], nbinsx=40,
-                                       marker=dict(color=px.colors.qualitative.Set2[p])), row=m+1, col=1 )
+                                        marker=dict(color=px.colors.qualitative.Set2[p])), row=m+1, col=1 )
             p = p+1
             fig.add_trace(go.Histogram(x=df_Dict[BrandList[p]][col], name=BrandList[p], nbinsx=40,
-                                       marker=dict(color=px.colors.qualitative.Set2[p])), row=m+1, col=2 )
+                                        marker=dict(color=px.colors.qualitative.Set2[p])), row=m+1, col=2 )
             p = p+1
         
         fig.update_layout(title_text="E : "+col,height=700, width=1000,
@@ -659,9 +613,9 @@ def plot_brand_positioning(df, x_col, y_col, eps=2, min_samples=3):
             ),
             name=f"Cluster {cluster}",
             hovertemplate="<b>%{text}</b><br>" + 
-                         x_col + ": %{x:.2f}<br>" + 
-                         y_col + ": %{y:.2f}<br>" +
-                         "Cluster: " + str(cluster) + "<extra></extra>"
+                          x_col + ": %{x:.2f}<br>" + 
+                          y_col + ": %{y:.2f}<br>" +
+                          "Cluster: " + str(cluster) + "<extra></extra>"
         ))
 
     # Add center lines at 0,0
@@ -817,3 +771,720 @@ def process_collaborations(df):
 def processed_collaborations(df):
     """Processes only the Collaborations column."""
     return process_collaborations(df)
+
+
+
+def classify_athletic_fashion_refined(df):
+    """
+    Classify products using refined keyword matching with specified thresholds.
+    Returns a DataFrame with unique products and their classifications.
+    """
+    # Athletic/Functional Keywords
+    athletic_keywords = [
+        'athletic', 'sporty', 'functional', 'performance-driven', 'performance', 
+        'utilitarian', 'techwear', 'rugged', 'outdoorsy', 'tech-inspired', 
+        'comfortable', 'casual', 'futuristic', 'sleek', 'versatile', 'supportive', 
+        'durable', 'breathable', 'trail-inspired', 'trail', 'running-inspired', 
+        'running', 'training-focused', 'training', 'dynamic', 'barefoot-inspired', 
+        'barefoot', 'aerodynamic', 'engineered', 'high-tech', 'ergonomic', 
+        'cushioned', 'impact-absorbing', 'lightweight', 'technical', 'sport', 
+        'fitness', 'workout', 'active', 'movement', 'flexibility', 'stability', 
+        'traction', 'grip', 'outdoor', 'hiking', 'moisture-wicking'
+    ]
+    
+    # Fashion/Lifestyle Keywords
+    fashion_keywords = [
+        'fashion-forward', 'high-fashion', 'avant-garde', 'trendy', 'luxurious', 
+        'luxury', 'glamorous', 'feminine', 'statement', 'whimsical', 'playful', 
+        'chic', 'retro', 'retro-inspired', 'vintage-inspired', 'vintage', 
+        'streetwear', 'bold', 'edgy', 'classic', 'sophisticated', 'artistic', 
+        'quirky', 'preppy', 'urban', 'bohemian', 'nautical', 'androgynous', 
+        'sculptural', 'dramatic', 'branded', 'logo-centric', 'decorative', 
+        'embellished', 'summery', 'resort-inspired', 'resort', 'western-inspired', 
+        'western', 'y2k', 'grunge', 'punk', 'rock', 'parisian', 'ornate', 
+        'regal', 'baroque', 'sensual', 'elegant', 'stylish', 'fashionable', 
+        'designer', 'couture', 'aesthetic', 'trendsetting', 'iconic', 'signature', 
+        'exclusive'
+    ]
+    
+    # Columns to search for keywords
+    search_columns = [
+        'Design Elements', 'Aesthetic Type', 'Silhouette', 'Branding Style', 
+        'Product Story', 'Target consumer Lifestyle', 'Target consumer Fashion Style',
+        'Occasions for Use (Sports)', 'Occasions for Use (Casual)'
+    ]
+    
+    # Get unique products
+    df_unique = df.drop_duplicates(subset=['Product URL']).copy()
+
+    # Initialize scores
+    df_unique['athletic_score'] = 0
+    df_unique['fashion_score'] = 0
+    df_unique['total_keywords_found'] = 0
+    
+    # Process each product
+    for idx, row in df_unique.iterrows():
+        # Combine all relevant text fields
+        combined_text = ""
+        for col in search_columns:
+            if col in df_unique.columns and pd.notna(row[col]) and row[col] != '':
+                combined_text += " " + str(row[col]).lower()
+        
+        # Count keyword matches
+        athletic_matches = sum(1 for keyword in athletic_keywords if keyword in combined_text)
+        fashion_matches = sum(1 for keyword in fashion_keywords if keyword in combined_text)
+        
+        df_unique.at[idx, 'athletic_score'] = athletic_matches
+        df_unique.at[idx, 'fashion_score'] = fashion_matches
+        df_unique.at[idx, 'total_keywords_found'] = athletic_matches + fashion_matches
+    
+    # Classification logic
+    def classify_product_refined(row):
+        athletic_score = row['athletic_score']
+        fashion_score = row['fashion_score']
+        
+        # Apply the specified rules
+        if athletic_score >= 2 and fashion_score >= 2:
+            # Both categories have significant presence
+            if athletic_score > fashion_score * 1.5:
+                return 'Athletic/Functional'
+            elif fashion_score > athletic_score * 1.5:
+                return 'Fashion/Lifestyle'
+            else:
+                return 'Hybrid/Athleisure'
+        elif athletic_score >= 2:
+            return 'Athletic/Functional'
+        elif fashion_score >= 2:
+            return 'Fashion/Lifestyle'
+        else:
+            # For products with fewer than 2 keywords in either category
+            # Use contextual clues and assign to Hybrid/Athleisure
+            subcategory = str(row.get('new_Sub-category', '')).lower()
+            product_type = str(row.get('new_Type', '')).lower()
+            
+            # Check for obvious athletic indicators
+            athletic_indicators = ['running', 'training', 'sport', 'athletic', 'performance', 'fitness']
+            fashion_indicators = ['fashion', 'lifestyle', 'casual', 'street', 'luxury', 'designer']
+            
+            if any(indicator in subcategory + ' ' + product_type for indicator in athletic_indicators):
+                return 'Athletic/Functional'
+            elif any(indicator in subcategory + ' ' + product_type for indicator in fashion_indicators):
+                return 'Fashion/Lifestyle'
+            else:
+                return 'Hybrid/Athleisure'
+    
+    df_unique['Athletic_Fashion_Category'] = df_unique.apply(classify_product_refined, axis=1)
+    
+    return df_unique
+
+def create_classification_summary_chart(df_classified):
+    """
+    Create a donut chart showing only the percentages for classification distribution
+    """
+    total_products = len(df_classified)
+    category_dist = df_classified.groupby('Athletic_Fashion_Category').size().reset_index()
+    category_dist.columns = ['Category', 'Product_Count']
+    category_dist['Percentage'] = round((category_dist['Product_Count'] / total_products * 100), 1)
+    
+    # Create donut chart with only percentages
+    fig = go.Figure(data=[go.Pie(
+        labels=category_dist['Category'],
+        values=category_dist['Product_Count'],
+        hole=0.4,
+        marker=dict(colors=['#ff7f0e', '#2ca02c', '#d62728']),  # Orange, Green, Red
+        textinfo='percent',
+        texttemplate='%{percent}',
+        textfont={'size': 16, 'color': 'white'},
+        showlegend=True
+    )])
+    
+    fig.update_layout(
+    height=500,
+    width=600,
+    showlegend=True,
+    legend=dict(
+        orientation="v",
+        yanchor="middle",
+        y=0.5,
+        xanchor="left",
+        x=1.05
+    )
+)
+    
+    return fig
+
+def create_graphviz_hierarchy_chart(df_classified):
+    """
+    Create a hierarchical tree chart using Graphviz
+    """
+    # Get data
+    total_products = len(df_classified)
+    category_dist = df_classified.groupby('Athletic_Fashion_Category').size().reset_index()
+    category_dist.columns = ['Category', 'Product_Count']
+    category_dist['Percentage'] = round((category_dist['Product_Count'] / total_products * 100), 1)
+    
+    subcat_dist = df_classified.groupby(['Athletic_Fashion_Category', 'new_Sub-category']).size().reset_index()
+    subcat_dist.columns = ['Category', 'Sub_Category', 'Product_Count']
+    subcat_dist['Percentage'] = round((subcat_dist['Product_Count'] / total_products * 100), 1)
+    
+    # Create Graphviz diagram
+    dot = graphviz.Digraph()
+    
+    # Configure graph attributes for better layout
+    dot.attr(rankdir='TB', splines='ortho', nodesep='0.5', ranksep='0.8')
+    dot.attr('node', shape='rect', style='filled', fontname='Arial', fontsize='10')
+    
+    # Root node
+    dot.node('A', f'Total Footwear Products\\n{total_products}', 
+              fillcolor='lightgreen', fontsize='12', style='filled,bold')
+    
+    # Category nodes
+    category_colors = {
+        'Athletic/Functional': 'lightcoral',
+        'Fashion/Lifestyle': 'lightpink', 
+        'Hybrid/Athleisure': 'lightyellow'
+    }
+    
+    category_nodes = {}
+    node_counter = ord('B')
+    
+    # Add category nodes and connect to root
+    edges_to_root = []
+    for _, cat_row in category_dist.iterrows():
+        category = cat_row['Category']
+        count = cat_row['Product_Count']
+        percentage = cat_row['Percentage']
+        
+        node_id = chr(node_counter)
+        category_nodes[category] = node_id
+        
+        color = category_colors.get(category, 'lightblue')
+        # Format category name for better display
+        display_name = category.replace('/', '/\\n')
+        dot.node(node_id, f'{display_name}\\n{count} products\\n({percentage}%)', 
+                fillcolor=color, fontsize='10')
+        edges_to_root.append(('A', node_id))
+        
+        node_counter += 1
+    
+    # Connect root to categories
+    dot.edges(edges_to_root)
+    
+    # Add subcategory nodes (limit to top subcategories to avoid clutter)
+    subcat_edges = []
+    for category in category_nodes.keys():
+        cat_subcats = subcat_dist[subcat_dist['Category'] == category].nlargest(4, 'Product_Count')
+        
+        for _, subcat_row in cat_subcats.iterrows():
+            subcat_name = subcat_row['Sub_Category']
+            subcat_count = subcat_row['Product_Count']
+            subcat_percentage = subcat_row['Percentage']
+            
+            parent_node = category_nodes[category]
+            subcat_node_id = chr(node_counter)
+            
+            # Truncate long subcategory names for better display
+            display_name = subcat_name if len(subcat_name) <= 12 else subcat_name[:10] + "..."
+            
+            dot.node(subcat_node_id, f'{display_name}\\n{subcat_count}\\n({subcat_percentage}%)', 
+                    fillcolor='white', fontsize='9')
+            subcat_edges.append((parent_node, subcat_node_id))
+            
+            node_counter += 1
+    
+    # Connect categories to subcategories
+    dot.edges(subcat_edges)
+    
+    return dot
+
+
+def create_keyword_analysis_table(df_classified):
+    """
+    Create a detailed analysis table showing keyword matches by category
+    """
+    # Group by category and calculate statistics
+    analysis_data = []
+    
+    for category in df_classified['Athletic_Fashion_Category'].unique():
+        cat_data = df_classified[df_classified['Athletic_Fashion_Category'] == category]
+        
+        analysis_data.append({
+            'Category': category,
+            'Product_Count': len(cat_data),
+            'Avg_Athletic_Score': round(cat_data['athletic_score'].mean(), 2),
+            'Avg_Fashion_Score': round(cat_data['fashion_score'].mean(), 2),
+            'Avg_Total_Keywords': round(cat_data['total_keywords_found'].mean(), 2),
+            'Max_Athletic_Score': cat_data['athletic_score'].max(),
+            'Max_Fashion_Score': cat_data['fashion_score'].max()
+        })
+    
+    return pd.DataFrame(analysis_data)
+
+import pandas as pd
+import plotly.graph_objects as go
+
+def classify_aesthetic_breakdown(df):
+    """
+    Classify products into aesthetic families using specified keywords.
+    Each product can belong to multiple aesthetic families (3-4 families per product).
+    """
+    aesthetic_families = {
+        'Minimalist': [
+            'minimalist', 'clean', 'understated', 'scandinavian', 'quiet-luxury', 
+            'subtle branding', 'quiet luxury', 'subtle'
+        ],
+        'Modern': [
+            'modern', 'sleek', 'sophisticated', 'versatile', 'refined', 'contemporary',
+            'design-led'
+        ],
+        'Classic/Heritage': [
+            'classic', 'penny-loafer', 'wingtip', 'varsity', 'parisian chic', 'heritage',
+            'timeless', 'traditional', 'parisian'
+        ],
+        'Retro/Vintage': [
+            'retro-inspired', 'vintage', 'chunky dad', 'y2k', 'faded wash', 'denim details',
+            'retro', 'chunky', 'dad sneaker', 'grunge'
+        ],
+        'Sporty/Athletic': [
+            'sporty', 'athletic', 'performance-driven', 'cushioned', 'breathable', 
+            'running-inspired', 'performance', 'running', 'training'
+        ],
+        'Streetwear': [
+            'streetwear', 'logo-centric', 'branded', 'hype', 'bold graphics', 
+            'deconstructed', 'urban', 'bold'
+        ],
+        'Luxury/Quiet Luxury': [
+            'luxurious', 'high-fashion', 'statement', 'crystal', 'subtly luxurious', 
+            'quiet luxury', 'luxury', 'premium', 'couture'
+        ],
+        'Avant-Garde/Conceptual': [
+            'avant-garde', 'conceptual', 'architectural', 'exaggerated sole', 
+            'bold statement', 'experimental', 'artistic'
+        ],
+        'Futuristic': [
+            'futuristic', 'tech-inspired', 'clear sole', 'iridescent', 'sculpted midsole',
+            'sci-fi', 'space-age', 'translucent'
+        ],
+        'Edgy/Punk/Rock': [
+            'edgy', 'rock-and-roll', 'punk', 'gothic', 'skull', 'studded', 'distressed',
+            'rock', 'rebellious', 'dark'
+        ],
+        'Glamorous': [
+            'glamorous', 'glitter', 'crystal', 'evening', 'baroque', 'dramatic', 
+            'opulent', 'sparkle', 'shine'
+        ],
+        'Playful/Whimsical': [
+            'playful', 'whimsical', 'quirky', 'star appliqué', 'rainbow', 'confetti', 
+            'animal print', 'colorful', 'novelty'
+        ],
+        'Bohemian/Western': [
+            'bohemian', 'western', 'paisley', 'equestrian', 'rustic', 'fringe',
+            'earthy', 'bandana', 'suede', 'cowgirl'
+        ],
+        'Feminine': [
+            'feminine', 'floral', 'flutter sleeve', 'pastel accents', 'romantic',
+            'soft', 'elegant', 'delicate'
+        ],
+        'Sustainable/Comfort Core': [
+            'sustainable', 'barefoot-inspired', 'cozy', 'comfortable', 'knitted', 
+            'quilted', 'eco', 'ergonomic', 'barefoot'
+        ]
+    }
+    
+    search_columns = [
+        'Design Elements', 'Aesthetic Type', 'Silhouette', 'Branding Style', 
+        'Product Story', 'Target consumer Lifestyle', 'Target consumer Fashion Style',
+        'Occasions for Use (Sports)', 'Occasions for Use (Casual)',
+    ]
+    
+    df_unique = df.drop_duplicates(subset=['Product URL']).copy()
+    
+    # Initialize scores
+    for family in aesthetic_families.keys():
+        df_unique[f'{family}_score'] = 0
+    
+    df_unique['total_aesthetic_keywords'] = 0
+    df_unique['aesthetic_families'] = ''
+    
+    for idx, row in df_unique.iterrows():
+        combined_text = ""
+        for col in search_columns:
+            if col in df_unique.columns and pd.notna(row[col]) and row[col] != '':
+                combined_text += " " + str(row[col]).lower()
+        
+        family_scores = {}
+        total_keywords = 0
+        
+        for family, keywords in aesthetic_families.items():
+            score = sum(1 for keyword in keywords if keyword in combined_text)
+            family_scores[family] = score
+            df_unique.at[idx, f'{family}_score'] = score
+            total_keywords += score
+        
+        df_unique.at[idx, 'total_aesthetic_keywords'] = total_keywords
+        
+        sorted_families = sorted(family_scores.items(), key=lambda x: x[1], reverse=True)
+        top_families = [family for family, score in sorted_families if score > 0][:4]
+        
+        df_unique.at[idx, 'aesthetic_families'] = ', '.join(top_families)
+    
+    return df_unique
+
+
+def create_aesthetic_summary_chart(df_aesthetic):
+    """
+    Create a horizontal bar chart showing the distribution of aesthetic families,
+    counting unique products under each family.
+    """
+    family_to_products = {}
+
+    for _, row in df_aesthetic.iterrows():
+        product_url = row['Product URL']
+        families = str(row['aesthetic_families']).split(', ')
+        for family in families:
+            if family and family != 'nan':
+                family_to_products.setdefault(family, set()).add(product_url)
+
+    aesthetic_counts = {family: len(products) for family, products in family_to_products.items()}
+
+    aesthetic_df = pd.DataFrame(list(aesthetic_counts.items()), columns=['Aesthetic_Family', 'Unique_Product_Count'])
+    aesthetic_df = aesthetic_df.sort_values('Unique_Product_Count', ascending=True)
+
+    fig = go.Figure(data=[go.Bar(
+        x=aesthetic_df['Unique_Product_Count'],
+        y=aesthetic_df['Aesthetic_Family'],
+        orientation='h',
+        marker=dict(color='lightblue', line=dict(color='darkblue', width=1)),
+        text=aesthetic_df['Unique_Product_Count'],
+        textposition='outside'
+    )])
+
+    fig.update_layout(
+        title={
+            'text': "Aesthetic Family Distribution (Unique Product Counts)",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 16}
+        },
+        xaxis_title="Number of Unique Products",
+        yaxis_title="Aesthetic Family",
+        height=600,
+        width=800,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+
+    return fig
+
+
+# Usage example:
+# df_classified = classify_aesthetic_breakdown(your_dataframe)
+# fig = create_aesthetic_summary_chart(df_classified)
+# fig.show()
+
+
+def create_functionality_aesthetic_graphviz_chart(df_aesthetic):
+    """
+    Create a hierarchical tree chart using Graphviz showing functionality → aesthetic breakdown
+    Counts each aesthetic family once per product within each functionality category
+    """
+    import graphviz
+    import pandas as pd
+
+    if df_aesthetic.empty:
+        return None
+
+    # Get functionality distribution
+    total_products = len(df_aesthetic)
+    functionality_dist = df_aesthetic.groupby('Athletic_Fashion_Category').size().reset_index()
+    functionality_dist.columns = ['Category', 'Product_Count']
+    functionality_dist['Percentage'] = round((functionality_dist['Product_Count'] / total_products * 100), 1)
+
+    # Calculate aesthetic distribution within each functionality
+    aesthetic_breakdown = []
+    functionality_nodes = {}
+    node_counter = ord('B')
+
+    dot = graphviz.Digraph()
+    dot.attr(rankdir='TB', splines='ortho', nodesep='0.5', ranksep='0.8')
+    dot.attr('node', shape='rect', style='filled', fontname='Arial', fontsize='10')
+
+    # Root node
+    dot.node('A', f'Total Footwear Products\\n{total_products}', 
+              fillcolor='lightgreen', fontsize='12', style='filled,bold')
+
+    # Functionality colors
+    functionality_colors = {
+        'Athletic/Functional': 'lightcoral',
+        'Fashion/Lifestyle': 'lightpink', 
+        'Hybrid/Athleisure': 'lightyellow'
+    }
+
+    edges_to_root = []
+    aesthetic_edges = []
+
+    for _, func_row in functionality_dist.iterrows():
+        functionality = func_row['Category']
+        func_products = df_aesthetic[df_aesthetic['Athletic_Fashion_Category'] == functionality]
+        total_func_products = len(func_products)
+
+        node_id = chr(node_counter)
+        functionality_nodes[functionality] = node_id
+        node_counter += 1
+
+        color = functionality_colors.get(functionality, 'lightblue')
+        display_name = functionality.replace('/', '/\\n')
+        dot.node(node_id, f'{display_name}\\n{total_func_products} products\\n({func_row["Percentage"]}%)', 
+                 fillcolor=color, fontsize='10')
+        edges_to_root.append(('A', node_id))
+
+        # Flatten aesthetic families
+        aesthetic_counts = {}
+        for _, row in func_products.iterrows():
+            families = str(row['aesthetic_families']).split(', ')
+            seen = set()
+            for family in families:
+                if family and family != 'nan' and family not in seen:
+                    aesthetic_counts[family] = aesthetic_counts.get(family, 0) + 1
+                    seen.add(family)
+
+        # Build aesthetic nodes (top 4 for clarity)
+        top_aesthetics = sorted(
+            aesthetic_counts.items(), key=lambda x: x[1], reverse=True
+        )[:4]
+
+        for family, count in top_aesthetics:
+            perc = round((count / total_func_products) * 100, 1)
+            aest_id = chr(node_counter)
+            display_name = family if len(family) <= 15 else family[:12] + "..."
+            dot.node(aest_id, f'{display_name}\\n{count}\\n({perc}%)',
+                     fillcolor='white', fontsize='9')
+            aesthetic_edges.append((node_id, aest_id))
+            node_counter += 1
+
+    dot.edges(edges_to_root)
+    dot.edges(aesthetic_edges)
+
+    return dot
+
+
+
+
+
+#############
+import pandas as pd
+
+def create_brand_aesthetic_table(df_aesthetic):
+    """
+    Create a clean brand-level aesthetic distribution table.
+    Shows each brand and its aesthetic family proportions.
+    Ensures all unique brands are represented.
+    """
+    if df_aesthetic.empty:
+        return pd.DataFrame()
+
+    # Clean and collect brand/aesthetic pairs
+    aesthetic_data = []
+
+    for _, row in df_aesthetic.iterrows():
+        brand = str(row.get('Brand_D2C', '')).strip()
+        families = str(row.get('aesthetic_families', '')).split(', ')
+        for family in families:
+            if family and family.lower() != 'nan':
+                aesthetic_data.append({'Brand_D2C': brand, 'Aesthetic_Family': family})
+
+    df_clean = pd.DataFrame(aesthetic_data)
+
+    # Get list of all unique brands (cleaned)
+    all_brands = df_aesthetic['Brand_D2C'].dropna().apply(lambda x: str(x).strip()).unique()
+
+    if df_clean.empty:
+        return pd.DataFrame({'Brand_D2C': all_brands, 'Aesthetic Type': 'No aesthetics listed'})
+
+    # Group and count aesthetic occurrences
+    brand_family_counts = df_clean.groupby(['Brand_D2C', 'Aesthetic_Family']).size().reset_index(name='Count')
+
+    # Compute percentages
+    brand_totals = brand_family_counts.groupby('Brand_D2C')['Count'].sum().reset_index(name='Total')
+    df_merged = brand_family_counts.merge(brand_totals, on='Brand_D2C')
+    df_merged['Percentage'] = df_merged['Count'] / df_merged['Total']
+
+    # Format summary string per row
+    df_merged['Formatted'] = df_merged['Aesthetic_Family'] + ' : ' + (df_merged['Percentage'] * 100).round(1).astype(str) + '%'
+
+    # Final summary table
+    summary_df = df_merged.groupby('Brand_D2C')['Formatted'].apply(list).reset_index()
+    summary_df['Aesthetic Type'] = summary_df['Formatted'].apply(lambda x: '; '.join(x))
+    summary_df = summary_df[['Brand_D2C', 'Aesthetic Type']]
+
+    # Ensure all brands are included, even if missing aesthetics
+    summary_df = pd.merge(
+        pd.DataFrame({'Brand_D2C': all_brands}),
+        summary_df,
+        on='Brand_D2C',
+        how='left'
+    ).fillna({'Aesthetic Type': 'No aesthetics listed'})
+
+    return summary_df
+
+
+
+
+
+
+
+# Usage in your Streamlit app:
+# display_expandable_hierarchy(df_classified)
+# Usage in your Streamlit app:
+# display_clickable_chart_hierarchy(df_classified)
+
+# Usage:
+# display_clickable_hierarchy(df_classified)
+# charts.py
+# Also, let's update the create_functionality_aesthetic_breakdown_chart function to show correct percentages:
+def create_functionality_aesthetic_table(df_aesthetic):
+    """
+    Create a detailed breakdown table showing functionality vs aesthetic families
+    """
+    # Check if we have data
+    if df_aesthetic.empty:
+        return pd.DataFrame()
+    
+    # Create cross-tabulation
+    cross_tab_data = []
+    
+    for _, row in df_aesthetic.iterrows():
+        functionality = row.get('Athletic_Fashion_Category', '')
+        if not functionality:
+            continue
+            
+        families = str(row.get('aesthetic_families', '')).split(', ')
+        for family in families:
+            if family and family != 'nan' and family != '':
+                cross_tab_data.append({
+                    'Functionality': functionality,
+                    'Aesthetic_Family': family,
+                    'Brand': row.get('Brand_D2C', '')
+                })
+    
+    if not cross_tab_data:
+        return pd.DataFrame()
+    
+    cross_tab_df = pd.DataFrame(cross_tab_data)
+    
+    # Create summary table
+    summary_table = cross_tab_df.groupby(['Functionality', 'Aesthetic_Family']).agg({
+        'Brand': ['count', 'nunique']
+    }).reset_index()
+    
+    summary_table.columns = ['Functionality', 'Aesthetic_Family', 'Product_Count', 'Brand_Count']
+    summary_table = summary_table.sort_values(['Functionality', 'Product_Count'], ascending=[True, False])
+    
+    return summary_table
+
+def create_functionality_aesthetic_breakdown_chart(df_aesthetic):
+    """
+    Create a stacked bar chart showing aesthetic breakdown by functionality category
+    """
+    # Check if we have data
+    if df_aesthetic.empty:
+        return go.Figure()
+    
+    # Create cross-tabulation data with unique product counts
+    functionality_aesthetic_data = {}
+    
+    for functionality in df_aesthetic['Athletic_Fashion_Category'].unique():
+        func_products = df_aesthetic[df_aesthetic['Athletic_Fashion_Category'] == functionality]
+        aesthetic_counts = {}
+        
+        # Count unique products for each aesthetic family
+        for _, row in func_products.iterrows():
+            families = str(row.get('aesthetic_families', '')).split(', ')
+            for family in families:
+                if family and family != 'nan' and family != '':
+                    if family not in aesthetic_counts:
+                        aesthetic_counts[family] = set()
+                    aesthetic_counts[family].add(row['Product Image'])  # Use unique product identifier
+        
+        # Convert to actual counts
+        functionality_aesthetic_data[functionality] = {
+            family: len(product_set) for family, product_set in aesthetic_counts.items()
+        }
+    
+    if not functionality_aesthetic_data:
+        # Return empty figure with message
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data available for functionality-aesthetic breakdown",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        return fig
+    
+    # Convert to DataFrame for plotting
+    plot_data = []
+    for functionality, aesthetic_data in functionality_aesthetic_data.items():
+        for aesthetic_family, count in aesthetic_data.items():
+            plot_data.append({
+                'Functionality': functionality,
+                'Aesthetic_Family': aesthetic_family,
+                'Count': count
+            })
+    
+    if not plot_data:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data available for functionality-aesthetic breakdown",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font=dict(size=16)
+        )
+        return fig
+    
+    plot_df = pd.DataFrame(plot_data)
+    
+    # Create pivot table for stacked bar chart
+    pivot_table = plot_df.pivot(index='Functionality', columns='Aesthetic_Family', values='Count').fillna(0)
+    
+    # Create stacked bar chart
+    fig = go.Figure()
+    
+    # Color palette for aesthetic families
+    colors = px.colors.qualitative.Set3
+    
+    for i, aesthetic_family in enumerate(pivot_table.columns):
+        fig.add_trace(go.Bar(
+            name=aesthetic_family,
+            x=pivot_table.index,
+            y=pivot_table[aesthetic_family],
+            marker_color=colors[i % len(colors)],
+            text=pivot_table[aesthetic_family],
+            textposition='inside',
+            textfont={'size': 10}
+        ))
+    
+    fig.update_layout(
+        title={
+            'text': "Aesthetic Family Distribution by Functionality Category (Unique Products)",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 16}
+        },
+        xaxis_title="Functionality Category",
+        yaxis_title="Number of Unique Products",
+        barmode='stack',
+        height=600,
+        width=1000,
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02
+        ),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    
+    return fig

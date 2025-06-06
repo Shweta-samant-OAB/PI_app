@@ -135,8 +135,7 @@ if __name__ == '__main__':
     add_line()
 
     # Initialize dff2 before using it in sections
-    dff2 = streamlit_sidebar_selections_B(dff)
-    
+    dff2 = streamlit_sidebar_selections_B(dff)    
     # Apply brand filter to dff2 if any brands are selected
     if 'selected_brands' in st.session_state and st.session_state.selected_brands:
         dff2 = dff2[dff2['Brand_D2C'].isin(st.session_state.selected_brands)]
@@ -326,16 +325,16 @@ if __name__ == '__main__':
     add_line()
 
     # Move Section H here
-    _title = "H : Product Image Snapshot"
-    col1 = 'Product Image'
-    col2 = 'Product URL'
-    product_image = list(dff2[col1].unique())[:100]
+    # _title = "H : Product Image Snapshot"
+    # col1 = 'Product Image'
+    # col2 = 'Product URL'
+    # product_image = list(dff2[col1].unique())[:100]
 
-    st.markdown(f'<p style="color:black;font-size:16px;font-weight:bold;border-radius:2%;"> '+_title+'</p>', unsafe_allow_html=True)
-    with st.container():
-        show_product_image_and_URL(dff2, col1, col2, product_image)
+    # st.markdown(f'<p style="color:black;font-size:16px;font-weight:bold;border-radius:2%;"> '+_title+'</p>', unsafe_allow_html=True)
+    # with st.container():
+    #     show_product_image_and_URL(dff2, col1, col2, product_image)
 
-    add_line()
+    # add_line()
 
     category_pairs = [
         ("Fashion-forward", "Function-forward"),
@@ -499,3 +498,62 @@ if __name__ == '__main__':
 
     # except:
     #     st.write('Please make a selection!')
+
+import graphviz
+
+with st.expander("**🏃‍♂️ Athletic vs Fashion Classification**", expanded=True):
+    # Classify the products using refined methodology
+    dff_classified = classify_athletic_fashion_refined(dff2)
+
+    # Create two columns for charts
+    
+        # Create and display the pie chart
+    fig_pie = create_classification_summary_chart(dff_classified)
+    st.plotly_chart(fig_pie, use_container_width=True)
+    
+    # Create and display the Graphviz hierarchy chart below the pie chart
+    st.markdown("#### Footwear Classification Hierarchy Tree")
+    dot_chart = create_graphviz_hierarchy_chart(dff_classified)
+    st.graphviz_chart(dot_chart)
+    
+    add_line()
+
+with st.expander("**🎨 Aesthetic Breakdown Classification**", expanded=True):
+
+    # Classify the products using aesthetic breakdown methodology
+    dff_aesthetic = classify_aesthetic_breakdown(dff_classified)  # Use the already classified athletic/fashion data
+    
+    # Show aesthetic summary
+    total_aesthetic_products = len(dff_aesthetic)
+    products_with_aesthetics = len(dff_aesthetic[dff_aesthetic['aesthetic_families'] != ''])
+    aesthetic_coverage = round((products_with_aesthetics / total_aesthetic_products * 100), 1)
+    
+    # Create and display the Graphviz hierarchy chart showing the relationship
+    st.markdown("#### Functionality → Aesthetic Family Hierarchy Tree")
+    try:
+        dot_chart_cross = create_functionality_aesthetic_graphviz_chart(dff_aesthetic)
+        if dot_chart_cross is not None:
+            st.graphviz_chart(dot_chart_cross)
+        else:
+            st.warning("No data available for hierarchy chart")
+    except Exception as e:
+        st.error(f"Error creating hierarchy chart: {str(e)}")
+
+# Add brand-wise aesthetic distribution table
+# Add brand-wise aesthetic distribution table
+st.markdown("#### 🧠 Brand-level Aesthetic Distribution Table")
+
+try:
+    brand_aesthetic_df = create_brand_aesthetic_table(dff_aesthetic)
+
+    if not brand_aesthetic_df.empty:
+        st.dataframe(brand_aesthetic_df, use_container_width=True)
+    else:
+        st.warning("No aesthetic data found for brands.")
+
+except Exception as e:
+    st.error(f"Error generating aesthetic distribution table: {str(e)}")
+
+
+
+add_line()        

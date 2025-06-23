@@ -157,6 +157,55 @@ def sustainability_cluster(df_, clusterName, sustainability_range):
 
     return df_
 
+
+def add_brand_image_to_sustainability(fig, chart_df, context, measure_field, clusterName, add_vline="No", selected_range=None):
+    brandLogo_path = Path.cwd().joinpath("brandLogo")
+    
+    # Add brand logos
+    for brand in chart_df[context].unique():
+        img_path = os.path.join(brandLogo_path, brand + ".jpg")
+        
+        if os.path.exists(img_path):  # Ensure the image exists
+            img_x = chart_df.loc[chart_df[context] == brand, measure_field].values[0]
+            img_y = chart_df.loc[chart_df[context] == brand, context].values[0]
+            
+            fig.add_layout_image(
+                x=img_x,
+                y=img_y,
+                source=Image.open(img_path),
+                xref="x",
+                yref="y",
+                sizex=0.8,
+                sizey=0.8,
+                xanchor="center",
+                yanchor="middle",
+            )
+    
+    # Add or update vertical lines based on selected range
+    if add_vline == "Yes":
+        # Remove any existing vertical lines from previous updates
+        if hasattr(fig, 'layout') and hasattr(fig.layout, 'shapes'):
+            fig.layout.shapes = [shape for shape in fig.layout.shapes 
+                               if not (isinstance(shape, dict) and shape.get('type') == 'line' 
+                                     and shape.get('line', {}).get('dash') == 'dash')]
+        
+        if selected_range is not None:
+            min_x, max_x = selected_range
+        else:
+            # Use default from cluster if no range is provided
+            min_x = chart_df[chart_df[clusterName] == "Yes"][measure_field].min()
+            max_x = chart_df[chart_df[clusterName] == "Yes"][measure_field].max()
+        
+        # Add vertical lines
+        fig.add_vline(x=min_x, line_width=1, line_color="coral", line_dash="dash")
+        fig.add_vline(x=max_x, line_width=1, line_color="coral", line_dash="dash")
+    
+    # Set x-axis to be fixed during interaction
+    fig.update_xaxes(fixedrange=True)
+    
+    return fig
+
+
 def streamlit_sidebar_selections_A(df_):
 
     option0 = st.sidebar.multiselect(
@@ -205,93 +254,156 @@ def highlight_dataframe_cells(row):
     )
 
 
-def add_brand_image_to_scatter(
-    fig, chart_df, context, measure_field, clusterName, add_vline="No",sizex=50, sizey=50,
-):
 
-    brandLogo_path = Path.cwd().joinpath("brandLogo")
-    jpgLogo_path = []
-    for brandName in sorted(chart_df[context].unique()):
-        jpgLogo_path.append(os.path.join(brandLogo_path, brandName + ".jpg"))
 
-    jpgLogo_path = sorted(jpgLogo_path)
 
-    for x, y, jpg in zip(fig.data[0].x, fig.data[0].y, jpgLogo_path):
-        fig.add_layout_image(
-            x=x,
-            y=y,
-            source=Image.open(jpg),
-            xref="x",
-            yref="y",
-            sizex=sizex,
-            sizey=sizey,
-            xanchor="center",
-            yanchor="middle",
-        )
+def add_brand_image_to_scatter(fig, chart_df, context, measure_field, clusterName, add_vline='No'):
+    """
+    Safely add brand images to scatter plot, handling missing logos gracefully
+    """
+    try:
+        brandLogo_path = Path.cwd().joinpath("brandLogo")
+        
+        if not brandLogo_path.exists():
+            print("Brand logo directory not found. Skipping brand images.")
+            return fig
+        
+        # Get all available logo files
+        logo_extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif']
+        available_logos = {}
+        
+        for ext in logo_extensions:
+            for logo_file in brandLogo_path.glob(ext):
+                brand_name = logo_file.stem
+                available_logos[brand_name.lower()] = str(logo_file)
+        
+        if not available_logos:
+            print("No logo files found in brandLogo directory.")
+            return fig
+        
+        # Add images for brands that have logos
+        for i, (x, y) in enumerate(zip(fig.data[0].x, fig.data[0].y)):
+            if i < len(chart_df):
+                brand_name = str(chart_df.iloc[i][context])
+                brand_key = brand_name.lower().replace(' ', '').replace('-', '').replace('_', '')
+                
+                # Try different variations of the brand name
+                possible_keys = [
+                    brand_name.lower(),
+                    brand_name.lower().replace(' ', '_'),
+                    brand_name.lower().replace(' ', '-'),
+                    brand_name.lower().replace(' ', ''),
+                    brand_key
+                ]
+                
+                logo_path = None
+                for key in possible_keys:
+                    if key in available_logos:
+                        logo_path = available_logos[key]
+                        break
+                
+                if logo_path:
+                    try:
+                        img = Image.open(logo_path)
+                        fig.add_layout_image(
+                            x=x, y=y, 
+                            source=img, 
+                            xref="x", yref="y", 
+                            sizex=50, sizey=50, 
+                            xanchor="center", yanchor="middle"
+                        )
+                    except Exception as img_error:
+                        print(f"Could not load image for {brand_name}: {img_error}")
 
-    if add_vline == "Yes":
-        fig.add_vline(
-            x=chart_df[chart_df[clusterName] == "Yes"][measure_field].min(),
-            line_width=1,
-            line_color="coral",
-            line_dash="dash",
-        )
-        fig.add_vline(
-            x=chart_df[chart_df[clusterName] == "Yes"][measure_field].max(),
-            line_width=1,
-            line_color="coral",
-            line_dash="dash",
-        )
-
+        # Add vertical lines if requested
+        if add_vline == 'Yes':
+            try:
+                cluster_data = chart_df[chart_df[clusterName] == 'Yes']
+                if not cluster_data.empty and measure_field in cluster_data.columns:
+                    min_val = cluster_data[measure_field].min()
+                    max_val = cluster_data[measure_field].max()
+                    if pd.notna(min_val) and pd.notna(max_val):
+                        fig.add_vline(x=min_val, line_width=1, line_color="coral", line_dash="dash")
+                        fig.add_vline(x=max_val, line_width=1, line_color="coral", line_dash="dash")
+            except Exception as vline_error:
+                print(f"Could not add vertical lines: {vline_error}")
+                
+    except Exception as e:
+        print(f"Error in add_brand_image_to_scatter: {e}")
+        
     return fig
 
 
-def add_brand_image_to_sustainability(fig, chart_df, context, measure_field, clusterName, add_vline="No", selected_range=None):
-    brandLogo_path = Path.cwd().joinpath("brandLogo")
-    
-    # Add brand logos
-    for brand in chart_df[context].unique():
-        img_path = os.path.join(brandLogo_path, brand + ".jpg")
+
+
+
+
+
+
+# def add_brand_image_to_sustainability(fig, chart_df, context, measure_field, clusterName, add_vline='No', selected_range=None):
+#     """
+#     Safely add brand images to sustainability plot
+#     """
+#     try:
+#         brandLogo_path = Path.cwd().joinpath("brandLogo")
         
-        if os.path.exists(img_path):  # Ensure the image exists
-            img_x = chart_df.loc[chart_df[context] == brand, measure_field].values[0]
-            img_y = chart_df.loc[chart_df[context] == brand, context].values[0]
-            
-            fig.add_layout_image(
-                x=img_x,
-                y=img_y,
-                source=Image.open(img_path),
-                xref="x",
-                yref="y",
-                sizex=0.8,
-                sizey=0.8,
-                xanchor="center",
-                yanchor="middle",
-            )
-    
-    # Add or update vertical lines based on selected range
-    if add_vline == "Yes":
-        # Remove any existing vertical lines from previous updates
-        if hasattr(fig, 'layout') and hasattr(fig.layout, 'shapes'):
-            fig.layout.shapes = [shape for shape in fig.layout.shapes 
-                               if not (isinstance(shape, dict) and shape.get('type') == 'line' 
-                                     and shape.get('line', {}).get('dash') == 'dash')]
+#         if not brandLogo_path.exists():
+#             print("Brand logo directory not found. Skipping brand images.")
+#             return fig
         
-        if selected_range is not None:
-            min_x, max_x = selected_range
-        else:
-            # Use default from cluster if no range is provided
-            min_x = chart_df[chart_df[clusterName] == "Yes"][measure_field].min()
-            max_x = chart_df[chart_df[clusterName] == "Yes"][measure_field].max()
+#         # Get all available logo files
+#         logo_extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif']
+#         available_logos = {}
         
-        # Add vertical lines
-        fig.add_vline(x=min_x, line_width=1, line_color="coral", line_dash="dash")
-        fig.add_vline(x=max_x, line_width=1, line_color="coral", line_dash="dash")
-    
-    # Set x-axis to be fixed during interaction
-    fig.update_xaxes(fixedrange=True)
-    
-    return fig
+#         for ext in logo_extensions:
+#             for logo_file in brandLogo_path.glob(ext):
+#                 brand_name = logo_file.stem
+#                 available_logos[brand_name.lower()] = str(logo_file)
+        
+#         # Add images for brands that have logos
+#         for i, (x, y) in enumerate(zip(fig.data[0].x, fig.data[0].y)):
+#             if i < len(chart_df):
+#                 brand_name = str(chart_df.iloc[i][context])
+                
+#                 # Try different variations of the brand name
+#                 possible_keys = [
+#                     brand_name.lower(),
+#                     brand_name.lower().replace(' ', '_'),
+#                     brand_name.lower().replace(' ', '-'),
+#                     brand_name.lower().replace(' ', '')
+#                 ]
+                
+#                 logo_path = None
+#                 for key in possible_keys:
+#                     if key in available_logos:
+#                         logo_path = available_logos[key]
+#                         break
+                
+#                 if logo_path:
+#                     try:
+#                         img = Image.open(logo_path)
+#                         fig.add_layout_image(
+#                             x=x, y=y, 
+#                             source=img, 
+#                             xref="x", yref="y", 
+#                             sizex=50, sizey=50, 
+#                             xanchor="center", yanchor="middle"
+#                         )
+#                     except Exception as img_error:
+#                         print(f"Could not load image for {brand_name}: {img_error}")
+
+#         # Add vertical lines for selected range
+#         if add_vline == 'Yes' and selected_range:
+#             try:
+#                 fig.add_vline(x=selected_range[0], line_width=2, line_color="green", line_dash="dash")
+#                 fig.add_vline(x=selected_range[1], line_width=2, line_color="green", line_dash="dash")
+#             except Exception as vline_error:
+#                 print(f"Could not add vertical lines: {vline_error}")
+                
+#     except Exception as e:
+#         print(f"Error in add_brand_image_to_sustainability: {e}")
+        
+#     return fig
 
 
 def plot_images_side_by_side(image_paths):

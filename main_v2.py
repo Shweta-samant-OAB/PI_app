@@ -738,20 +738,20 @@ with st.expander("**🎨 Price Analysis by Aesthetic Family", expanded=True):
                 ordered=True
             )
             
-            # Create average price bar chart instead of box plot
+            # Create average price bar chart with swapped axes
             avg_price_df = price_plot_df.groupby(['Aesthetic_Family', 'Brand'])['Price'].mean().reset_index()
-            
+
             fig_price = px.bar(
                 avg_price_df,
-                x='Aesthetic_Family',
+                x='Brand',  # Swapped: Brand is now on x-axis
                 y='Price',
-                color='Brand',
-                title=f'Average Price by Aesthetic Family and Brand{" - " + functionality_filter if functionality_filter != "All" else ""}',
+                color='Aesthetic_Family',  # Swapped: Aesthetic Family is now the color grouping
+                title=f'Average Price by Brand and Aesthetic Family{" - " + functionality_filter if functionality_filter != "All" else ""}',
                 height=600,
                 barmode='group'
             )
             fig_price.update_layout(
-                xaxis_title="Aesthetic Family",
+                xaxis_title="Brand",  # Updated axis title
                 yaxis_title="Average Price ($)",
                 xaxis={'tickangle': 45},
                 showlegend=True

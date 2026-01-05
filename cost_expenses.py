@@ -102,7 +102,24 @@ try:
     df = pd.read_csv("gcp_costs.csv")
 
     if 'service_description' in df.columns and 'Subtotal' in df.columns:
-        df['Cost_USD'] = pd.to_numeric(df['Subtotal'], errors='coerce')
+
+        df['Subtotal_clean'] = (
+            df['Subtotal']
+            .astype(str)
+            .str.replace(',', '', regex=False)
+            .str.replace('$', '', regex=False)
+            .str.strip()
+        )
+
+        df['Cost_USD'] = pd.to_numeric(df['Subtotal_clean'], errors='coerce')
+
+        df = df[
+            (df['Cost_USD'] > 0) &
+            df['service_description'].notna()
+        ]
+
+        df = df.drop_duplicates()
+
         df['Cost_INR'] = df['Cost_USD'] * USD_TO_INR
 
         date_col = next((c for c in df.columns if 'date' in c.lower()), None)
@@ -111,11 +128,15 @@ try:
             df['Month'] = df['Date'].dt.to_period('M').astype(str)
 
         st.session_state.gcp_data = df
+
+        print("GCP USD total (Excel matched):", df['Cost_USD'].sum())
+
     else:
         st.error("GCP CSV must contain 'service_description' and 'Subtotal'")
 
 except FileNotFoundError:
-    st.warning(" gcp_costs.csv not found")
+    st.warning("gcp_costs.csv not found")
+
 # -------- AWS --------
 try:
     df = pd.read_csv("aws_costs.csv")
@@ -157,7 +178,8 @@ if not has_data:
 
 else:
     # Calculate totals (all in INR)
-    # Calculate totals (exact CSV columns + conversion)
+    # Calculate totals (exact CSV columns + conversions)
+
 
     azure_total = pd.to_numeric(
         st.session_state.azure_data['Cost'], errors='coerce'
@@ -166,12 +188,12 @@ else:
     gcp_total = pd.to_numeric(
         st.session_state.gcp_data['Subtotal'], errors='coerce'
     ).sum() * USD_TO_INR
-    print(gcp_total)
+    print('gcp_total:', gcp_total)
 
     aws_total = pd.to_numeric(
         st.session_state.aws_data['Total costs($)'], errors='coerce'
     ).sum() * USD_TO_INR
-    print(aws_total)
+    print('aws_total:', aws_total)
 
     grand_total = azure_total + gcp_total + aws_total
 
@@ -266,7 +288,6 @@ else:
                 summary_data.append({
                     'Provider': '🔷 Azure',
                     'Total Cost': f"₹{azure_total:,.2f}",
-                    'Records': len(st.session_state.azure_data),
                     '% of Total': f"{(azure_total/grand_total*100):.1f}%" if grand_total > 0 else "0%"
                 })
             
@@ -274,7 +295,6 @@ else:
                 summary_data.append({
                     'Provider': '🔵 GCP',
                     'Total Cost': f"₹{gcp_total:,.2f}",
-                    'Resources/Services': len(st.session_state.gcp_data),
                     '% of Total': f"{(gcp_total/grand_total*100):.1f}%" if grand_total > 0 else "0%"
                 })
             
@@ -282,7 +302,6 @@ else:
                 summary_data.append({
                     'Provider': '🟠 AWS',
                     'Total Cost': f"₹{aws_total:,.2f}",
-                    'Resources/Services': len(st.session_state.aws_data),
                     '% of Total': f"{(aws_total/grand_total*100):.1f}%" if grand_total > 0 else "0%"
                 })
             

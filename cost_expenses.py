@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # Currency conversion rate (USD to INR)
-USD_TO_INR = 90.25 
+USD_TO_INR = 83.0  # You can update this rate as needed
 
 # Page configuration
 st.set_page_config(
@@ -57,99 +57,151 @@ if 'gcp_data' not in st.session_state:
 if 'aws_data' not in st.session_state:
     st.session_state.aws_data = None
 
-# File upload section
-st.header("📁 Upload Your Cloud Cost Data")
-col1, col2, col3 = st.columns(3)
+# Data loading section
+st.header("📁 Cloud Cost Data")
 
-with col1:
-    st.subheader("🔷 Azure")
-    azure_file = st.file_uploader("Upload Azure CSV", type=['csv'], key='azure')
-
-    if azure_file:
+# Function to load data from file paths
+def load_cloud_data():
+    """Load data from predefined file paths"""
+    # Define your file paths here
+    AZURE_FILE_PATH = "azure_costs.csv"  # Update with your actual path
+    GCP_FILE_PATH = "gcp_costs.csv"      # Update with your actual path
+    AWS_FILE_PATH = "aws_costs.csv"      # Update with your actual path
+    
+    # Load Azure data
+    if st.session_state.azure_data is None:
         try:
-            df = pd.read_csv(azure_file)
-
-            required_cols = {'ServiceName', 'UsageDate'}
-            if not required_cols.issubset(df.columns):
-                st.error("Azure CSV must contain 'ServiceName' and 'UsageDate'")
-            else:
-                if 'Cost' in df.columns:
-                    df['Cost'] = pd.to_numeric(df['Cost'], errors='coerce')
-                elif 'CostUSD' in df.columns:
-                    df['Cost'] = pd.to_numeric(df['CostUSD'], errors='coerce') * USD_TO_INR
-                else:
-                    st.error("Azure CSV must contain 'Cost' or 'CostUSD'")
-                    st.stop()
-
-                # Clean data
-                # df = df[df['Cost'] > 0]
-
-                # Date parsing
-                df['Date'] = pd.to_datetime(df['UsageDate'], dayfirst=True, errors='coerce')
-                df = df.dropna(subset=['Date'])
-
-                df['Month'] = df['Date'].dt.to_period('M').astype(str)
-
-                st.session_state.azure_data = df
-
-                st.success(f"✅ {len(df)} Azure records loaded")
-
+            df = pd.read_csv(AZURE_FILE_PATH)
+            if 'ServiceName' in df.columns and 'UsageDate' in df.columns:
+                cost_col = next((col for col in df.columns if 'cost' in col.lower()), None)
+                if cost_col:
+                    df['Cost'] = pd.to_numeric(df[cost_col], errors='coerce')
+                    df = df[df['Cost'] > 0]
+                    df['Date'] = pd.to_datetime(df['UsageDate'], format='%d/%m/%Y', errors='coerce')
+                    df['Month'] = df['Date'].dt.to_period('M').astype(str)
+                    st.session_state.azure_data = df
         except Exception as e:
-            st.error(f"Error reading Azure CSV: {e}")
-
-with col2:
-    st.subheader("🔵 GCP")
-    gcp_file = st.file_uploader("Upload GCP CSV", type=['csv'], key='gcp')
-    if gcp_file:
+            st.session_state.azure_data = None
+    
+    # Load GCP data
+    if st.session_state.gcp_data is None:
         try:
-            df = pd.read_csv(gcp_file)
-            # GCP uses service_description and Subtotal
+            df = pd.read_csv(GCP_FILE_PATH)
             if 'service_description' in df.columns and 'Subtotal' in df.columns:
                 df['Cost_USD'] = pd.to_numeric(df['Subtotal'], errors='coerce')
                 df['Cost_INR'] = df['Cost_USD'] * USD_TO_INR
                 df = df[df['Cost_INR'] > 0]
-                # Parse date if exists
                 date_col = next((col for col in df.columns if 'date' in col.lower()), None)
                 if date_col:
                     df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
                     df['Month'] = df['Date'].dt.to_period('M').astype(str)
                 st.session_state.gcp_data = df
-                st.success(f"✅ {len(df)} GCP records loaded")
-            else:
-                st.error("GCP CSV must contain 'service_description' and 'Subtotal' columns")
         except Exception as e:
-            st.error(f"Error reading GCP CSV: {str(e)}")
-
-with col3:
-    st.subheader("🟠 AWS")
-    aws_file = st.file_uploader("Upload AWS CSV", type=['csv'], key='aws')
-    if aws_file:
+            st.session_state.gcp_data = None
+    
+    # Load AWS data
+    if st.session_state.aws_data is None:
         try:
-            df = pd.read_csv(aws_file)
-            # AWS has Date column (month/date/year format) and Total costs($) column
+            df = pd.read_csv(AWS_FILE_PATH)
             if 'Date' in df.columns and 'Total costs($)' in df.columns:
-                # Parse date (month/date/year format)
                 df['Date'] = pd.to_datetime(df['Date'], format='%m/%d/%Y', errors='coerce')
                 df['Month'] = df['Date'].dt.to_period('M').astype(str)
-                
-                # Convert Total costs from USD to INR
                 df['Total_USD'] = pd.to_numeric(df['Total costs($)'], errors='coerce')
                 df['Total_INR'] = df['Total_USD'] * USD_TO_INR
-                
-                # Convert all other service costs from USD to INR (excluding Date, Month, Total costs($))
                 service_cols = [col for col in df.columns 
                               if col not in ['Date', 'Month', 'Total costs($)', 'Total_USD', 'Total_INR'] 
                               and pd.api.types.is_numeric_dtype(df[col])]
-                
                 for col in service_cols:
                     df[f'{col}_INR'] = pd.to_numeric(df[col], errors='coerce') * USD_TO_INR
-                
                 st.session_state.aws_data = df
-                st.success(f"✅ {len(df)} AWS records loaded")
-            else:
-                st.error("AWS CSV must contain 'Date' and 'Total costs($)' columns")
         except Exception as e:
-            st.error(f"Error reading AWS CSV: {str(e)}")
+            st.session_state.aws_data = None
+
+# Load data automatically
+load_cloud_data()
+
+# Show data loading status
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.session_state.azure_data is not None:
+        st.success(f"✅ Azure: {len(st.session_state.azure_data)} records")
+    else:
+        st.warning("⚠️ Azure: No data found")
+
+with col2:
+    if st.session_state.gcp_data is not None:
+        st.success(f"✅ GCP: {len(st.session_state.gcp_data)} records")
+    else:
+        st.warning("⚠️ GCP: No data found")
+
+with col3:
+    if st.session_state.aws_data is not None:
+        st.success(f"✅ AWS: {len(st.session_state.aws_data)} records")
+    else:
+        st.warning("⚠️ AWS: No data found")
+
+# Optional: Add upload functionality as backup
+with st.expander("📤 Or Upload Custom Data Files"):
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.subheader("🔷 Azure")
+        azure_file = st.file_uploader("Upload Azure CSV", type=['csv'], key='azure')
+        if azure_file:
+            try:
+                df = pd.read_csv(azure_file)
+                if 'ServiceName' in df.columns and 'UsageDate' in df.columns:
+                    cost_col = next((col for col in df.columns if 'cost' in col.lower()), None)
+                    if cost_col:
+                        df['Cost'] = pd.to_numeric(df[cost_col], errors='coerce')
+                        df = df[df['Cost'] > 0]
+                        df['Date'] = pd.to_datetime(df['UsageDate'], format='%d/%m/%Y', errors='coerce')
+                        df['Month'] = df['Date'].dt.to_period('M').astype(str)
+                        st.session_state.azure_data = df
+                        st.success(f"✅ {len(df)} Azure records loaded")
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+    
+    with col2:
+        st.subheader("🔵 GCP")
+        gcp_file = st.file_uploader("Upload GCP CSV", type=['csv'], key='gcp')
+        if gcp_file:
+            try:
+                df = pd.read_csv(gcp_file)
+                if 'service_description' in df.columns and 'Subtotal' in df.columns:
+                    df['Cost_USD'] = pd.to_numeric(df['Subtotal'], errors='coerce')
+                    df['Cost_INR'] = df['Cost_USD'] * USD_TO_INR
+                    df = df[df['Cost_INR'] > 0]
+                    date_col = next((col for col in df.columns if 'date' in col.lower()), None)
+                    if date_col:
+                        df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
+                        df['Month'] = df['Date'].dt.to_period('M').astype(str)
+                    st.session_state.gcp_data = df
+                    st.success(f"✅ {len(df)} GCP records loaded")
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+    
+    with col3:
+        st.subheader("🟠 AWS")
+        aws_file = st.file_uploader("Upload AWS CSV", type=['csv'], key='aws')
+        if aws_file:
+            try:
+                df = pd.read_csv(aws_file)
+                if 'Date' in df.columns and 'Total costs($)' in df.columns:
+                    df['Date'] = pd.to_datetime(df['Date'], format='%m/%d/%Y', errors='coerce')
+                    df['Month'] = df['Date'].dt.to_period('M').astype(str)
+                    df['Total_USD'] = pd.to_numeric(df['Total costs($)'], errors='coerce')
+                    df['Total_INR'] = df['Total_USD'] * USD_TO_INR
+                    service_cols = [col for col in df.columns 
+                                  if col not in ['Date', 'Month', 'Total costs($)', 'Total_USD', 'Total_INR'] 
+                                  and pd.api.types.is_numeric_dtype(df[col])]
+                    for col in service_cols:
+                        df[f'{col}_INR'] = pd.to_numeric(df[col], errors='coerce') * USD_TO_INR
+                    st.session_state.aws_data = df
+                    st.success(f"✅ {len(df)} AWS records loaded")
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
 
 st.markdown("---")
 
@@ -181,7 +233,7 @@ if not has_data:
     - Service columns (RDS, EC2, EKS, etc.) with costs in USD (will be converted to INR)
     """)
 else:
-    # Calculate totals (all in INR)
+    # Calculate totals (all in INR now)
     azure_total = st.session_state.azure_data['Cost'].sum() if st.session_state.azure_data is not None else 0
     gcp_total = st.session_state.gcp_data['Cost_INR'].sum() if st.session_state.gcp_data is not None else 0
     aws_total = st.session_state.aws_data['Total_INR'].sum() if st.session_state.aws_data is not None else 0

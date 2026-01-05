@@ -53,8 +53,6 @@ def format_inr(amount):
 # Title
 st.markdown('<h1 class="main-header">☁️ Multi-Cloud Cost Dashboard</h1>', unsafe_allow_html=True)
 st.markdown("**Unified view of Azure, GCP, and AWS expenses (All costs in INR)**")
-st.markdown("---")
-
 # Currency converter info
 # with st.expander("ℹ️ Currency Conversion Info"):
 #     st.info(f"Exchange Rate: 1 USD = ₹{USD_TO_INR}")

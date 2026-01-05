@@ -56,13 +56,13 @@ st.markdown("**Unified view of Azure, GCP, and AWS expenses (All costs in INR)**
 st.markdown("---")
 
 # Currency converter info
-with st.expander("ℹ️ Currency Conversion Info"):
-    st.info(f"Exchange Rate: 1 USD = ₹{USD_TO_INR}")
-    st.markdown("""
-    - **AWS**: Costs converted from USD to INR
-    - **GCP**: Costs converted from USD to INR
-    - **Azure**: Costs already in INR
-    """)
+# with st.expander("ℹ️ Currency Conversion Info"):
+#     st.info(f"Exchange Rate: 1 USD = ₹{USD_TO_INR}")
+#     st.markdown("""
+#     - **AWS**: Costs converted from USD to INR
+#     - **GCP**: Costs converted from USD to INR
+#     - **Azure**: Costs already in INR
+#     """)
 
 # Initialize session state for data storage
 if 'azure_data' not in st.session_state:

@@ -150,32 +150,32 @@ has_data = any([
     st.session_state.aws_data is not None
 ])
 
-if not has_data:
-    st.info("👆 Please upload at least one CSV file to get started")
-    st.markdown("""
-    ### Expected CSV Formats:
+# if not has_data:
+#     st.info("👆 Please upload at least one CSV file to get started")
+#     st.markdown("""
+#     ### Expected CSV Formats:
     
-    **Azure CSV should contain:**
-    - **UsageDate** column (format: date/month/year, e.g., 15/03/2024)
-    - **ServiceName** column
-    - Cost column (costs in INR)
+#     **Azure CSV should contain:**
+#     - **UsageDate** column (format: date/month/year, e.g., 15/03/2024)
+#     - **ServiceName** column
+#     - Cost column (costs in INR)
     
-    **GCP CSV should contain:**
-    - **service_description** column
-    - **Subtotal** column (costs in USD, will be converted to INR)
-    - Date column (optional)
+#     **GCP CSV should contain:**
+#     - **service_description** column
+#     - **Subtotal** column (costs in USD, will be converted to INR)
+#     - Date column (optional)
     
-    **AWS CSV should contain:**
-    - **Date** column (format: month/date/year, e.g., 03/15/2024)
-    - **Total costs($)** column (will be converted to INR)
-    - Service columns (RDS, EC2, EKS, etc.) with costs in USD (will be converted to INR)
-    """)
-else:
-    # Calculate totals (all in INR now)
-    azure_total = st.session_state.azure_data['Cost'].sum() if st.session_state.azure_data is not None else 0
-    gcp_total = st.session_state.gcp_data['Subtotal'].sum() if st.session_state.gcp_data is not None else 0
-    aws_total = st.session_state.aws_data['Total costs($)'].sum() if st.session_state.aws_data is not None else 0
-    grand_total = azure_total + gcp_total + aws_total
+#     **AWS CSV should contain:**
+#     - **Date** column (format: month/date/year, e.g., 03/15/2024)
+#     - **Total costs($)** column (will be converted to INR)
+#     - Service columns (RDS, EC2, EKS, etc.) with costs in USD (will be converted to INR)
+#     """)
+# else:
+#     # Calculate totals (all in INR now)
+#     azure_total = st.session_state.azure_data['Cost'].sum() if st.session_state.azure_data is not None else 0
+#     gcp_total = st.session_state.gcp_data['Subtotal'].sum() if st.session_state.gcp_data is not None else 0
+#     aws_total = st.session_state.aws_data['Total costs($)'].sum() if st.session_state.aws_data is not None else 0
+#     grand_total = azure_total + gcp_total + aws_total
     
 
 # OVERVIEW TAB

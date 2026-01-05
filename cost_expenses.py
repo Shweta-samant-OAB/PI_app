@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # Currency conversion rate (USD to INR)
-USD_TO_INR = 83.0  # You can update this rate as needed
+USD_TO_INR = 90.25  # You can update this rate as needed
 
 # Page configuration
 st.set_page_config(

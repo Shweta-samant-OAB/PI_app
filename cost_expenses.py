@@ -176,9 +176,6 @@ else:
     aws_total = st.session_state.aws_data['Total costs($)'].sum() if st.session_state.aws_data is not None else 0
     grand_total = azure_total + gcp_total + aws_total
     
-    # Create tabs
-    tabs = st.tabs(["📊 Overview", "🔷 Azure", "🔵 GCP", "🟠 AWS"])
-
 tabs = st.tabs(["📊 Overview", "🔷 Azure", "🔵 GCP", "🟠 AWS"])
 # OVERVIEW TAB
 with tabs[0]:

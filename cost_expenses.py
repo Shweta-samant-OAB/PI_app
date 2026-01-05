@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # Currency conversion rate (USD to INR)
-USD_TO_INR = 83.0  # You can update this rate as needed
+USD_TO_INR = 90.25 
 
 # Page configuration
 st.set_page_config(
@@ -64,27 +64,38 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.subheader("🔷 Azure")
     azure_file = st.file_uploader("Upload Azure CSV", type=['csv'], key='azure')
+
     if azure_file:
         try:
             df = pd.read_csv(azure_file)
-            # Azure uses ServiceName and UsageDate (date/month/year format)
-            if 'ServiceName' in df.columns and 'UsageDate' in df.columns:
-                # Find cost column
-                cost_col = next((col for col in df.columns if 'cost' in col.lower()), None)
-                if cost_col:
-                    df['Cost'] = pd.to_numeric(df[cost_col], errors='coerce')
-                    df = df[df['Cost'] > 0]
-                    # Parse date (date/month/year format)
-                    df['Date'] = pd.to_datetime(df['UsageDate'], format='%d/%m/%Y', errors='coerce')
-                    df['Month'] = df['Date'].dt.to_period('M').astype(str)
-                    st.session_state.azure_data = df
-                    st.success(f"✅ {len(df)} Azure records loaded")
-                else:
-                    st.error("Could not find cost column in Azure CSV")
+
+            required_cols = {'ServiceName', 'UsageDate'}
+            if not required_cols.issubset(df.columns):
+                st.error("Azure CSV must contain 'ServiceName' and 'UsageDate'")
             else:
-                st.error("Azure CSV must contain 'ServiceName' and 'UsageDate' columns")
+                if 'Cost' in df.columns:
+                    df['Cost'] = pd.to_numeric(df['Cost'], errors='coerce')
+                elif 'CostUSD' in df.columns:
+                    df['Cost'] = pd.to_numeric(df['CostUSD'], errors='coerce') * USD_TO_INR
+                else:
+                    st.error("Azure CSV must contain 'Cost' or 'CostUSD'")
+                    st.stop()
+
+                # Clean data
+                # df = df[df['Cost'] > 0]
+
+                # Date parsing
+                df['Date'] = pd.to_datetime(df['UsageDate'], dayfirst=True, errors='coerce')
+                df = df.dropna(subset=['Date'])
+
+                df['Month'] = df['Date'].dt.to_period('M').astype(str)
+
+                st.session_state.azure_data = df
+
+                st.success(f"✅ {len(df)} Azure records loaded")
+
         except Exception as e:
-            st.error(f"Error reading Azure CSV: {str(e)}")
+            st.error(f"Error reading Azure CSV: {e}")
 
 with col2:
     st.subheader("🔵 GCP")
@@ -170,8 +181,9 @@ if not has_data:
     - Service columns (RDS, EC2, EKS, etc.) with costs in USD (will be converted to INR)
     """)
 else:
-    # Calculate totals (all in INR now)
+    # Calculate totals (all in INR)
     azure_total = st.session_state.azure_data['Cost'].sum() if st.session_state.azure_data is not None else 0
+    print(azure_total)
     gcp_total = st.session_state.gcp_data['Cost_INR'].sum() if st.session_state.gcp_data is not None else 0
     aws_total = st.session_state.aws_data['Total_INR'].sum() if st.session_state.aws_data is not None else 0
     grand_total = azure_total + gcp_total + aws_total

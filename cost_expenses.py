@@ -162,8 +162,6 @@ try:
 except FileNotFoundError:
     st.warning("⚠️ aws_cost.csv not found")
 
-st.markdown("---")
-
 # Check if any data is loaded
 has_data = any([
     st.session_state.azure_data is not None,

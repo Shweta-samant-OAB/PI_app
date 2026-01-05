@@ -178,7 +178,8 @@ else:
     
     # Create tabs
     tabs = st.tabs(["📊 Overview", "🔷 Azure", "🔵 GCP", "🟠 AWS"])
-    
+
+tabs = st.tabs(["📊 Overview", "🔷 Azure", "🔵 GCP", "🟠 AWS"])
 # OVERVIEW TAB
 with tabs[0]:
     st.header("Cost Overview")

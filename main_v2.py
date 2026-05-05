@@ -79,13 +79,15 @@ if __name__ == "__main__":
         "Percentile Benchmark for Pricing", ("0.95", "0.75", "0.50", "0.25")
     )
     pricing_cluster_field = pricingfield_oup1 + "_" + pricing_percentile
+    df_percentile[pricing_cluster_field] = pd.to_numeric(df_percentile[pricing_cluster_field], errors="coerce")
+    
     pricing_values = st.sidebar.slider(
         "Select a range of values",
-        df_percentile[pricing_cluster_field].min(),
-        df_percentile[pricing_cluster_field].max(),
+        float(df_percentile[pricing_cluster_field].min()),
+        float(df_percentile[pricing_cluster_field].max()),
         (
-            df_percentile[pricing_cluster_field].min(),
-            df_percentile[pricing_cluster_field].max(),
+            float(df_percentile[pricing_cluster_field].min()),
+            float(df_percentile[pricing_cluster_field].max()),
         ),
     )
 

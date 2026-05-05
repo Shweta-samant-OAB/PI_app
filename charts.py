@@ -1182,9 +1182,9 @@ def classify_aesthetic_breakdown(df):
     for family in aesthetic_families.keys():
         df_unique[f'{family}_score'] = 0.0
     
-    df_unique['total_aesthetic_keywords'] = 0
+    df_unique['total_aesthetic_keywords'] = 0.0
     df_unique['aesthetic_families'] = ''
-    df_unique['aesthetic_coverage_score'] = 0
+    df_unique['aesthetic_coverage_score'] = 0.0
     
     for idx, row in df_unique.iterrows():
         # ENHANCED TEXT PROCESSING

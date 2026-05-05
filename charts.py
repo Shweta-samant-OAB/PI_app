@@ -1180,7 +1180,7 @@ def classify_aesthetic_breakdown(df):
     
     # Initialize scores
     for family in aesthetic_families.keys():
-        f_unique[f'{family}_score'] = 0.0 
+        df_unique[f'{family}_score'] = 0.0
     
     df_unique['total_aesthetic_keywords'] = 0
     df_unique['aesthetic_families'] = ''
